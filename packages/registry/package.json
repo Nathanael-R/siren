@@ -1,0 +1,43 @@
+{
+  "name": "@siren-ui/registry",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./schema": "./src/schema.ts",
+    "./entries": "./src/entries.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "clean": "node -e \"require('fs').rmSync('generated',{recursive:true,force:true})\"",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@siren-ui/core": "workspace:*",
+    "zod": "catalog:"
+  },
+  "peerDependencies": {
+    "expo-audio": ">=56 <58",
+    "expo-haptics": ">=56 <58",
+    "react": ">=19.2",
+    "react-native": ">=0.85 <0.87",
+    "react-native-gesture-handler": ">=2.28 <3",
+    "react-native-reanimated": ">=4.3 <4.6",
+    "react-native-worklets": ">=0.8 <0.12"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "expo-audio": "57.0.3",
+    "expo-haptics": "57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.2",
+    "react-native-gesture-handler": "2.32.0",
+    "react-native-reanimated": "4.5.1",
+    "react-native-worklets": "0.10.1",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@siren-ui/registry-builder",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "check": "tsx src/index.ts check",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "generate": "tsx src/index.ts generate",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "validate": "tsx src/index.ts validate"
+  },
+  "dependencies": {
+    "@siren-ui/registry": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.4",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
