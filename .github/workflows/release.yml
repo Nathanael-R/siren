@@ -1,0 +1,21 @@
+name: Prepare release
+on:
+  workflow_dispatch:
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    permissions: { contents: read }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.16.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.13.0, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm check
+      - run: pnpm --filter @siren-ui/core pack --pack-destination artifacts
+      - run: pnpm --filter siren-ui pack --pack-destination artifacts
+      - uses: actions/upload-artifact@v4
+        with: { name: npm-packages, path: artifacts/*.tgz }
+      # Publishing is intentionally manual and requires separately configured npm credentials.

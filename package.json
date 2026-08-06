@@ -1,0 +1,36 @@
+{
+  "name": "siren-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@11.16.0",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "changeset": "changeset",
+    "check": "pnpm generate:check && pnpm registry:validate && pnpm check:deps && pnpm check:duplicates && pnpm check:exports && pnpm check:size",
+    "check:deps": "node tooling/check-dependencies.mjs",
+    "check:duplicates": "node tooling/check-native-duplicates.mjs",
+    "check:exports": "node tooling/check-exports.mjs",
+    "check:size": "node tooling/check-packed-size.mjs",
+    "clean": "turbo run clean",
+    "docs:build": "pnpm --filter @siren-ui/docs build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "generate": "pnpm --filter @siren-ui/registry-builder generate",
+    "generate:check": "pnpm --filter @siren-ui/registry-builder check",
+    "lint": "turbo run lint",
+    "playground:export": "pnpm --filter @siren-ui/playground export",
+    "registry:validate": "pnpm --filter @siren-ui/registry-builder validate",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.29.7",
+    "@types/node": "^24.3.0",
+    "prettier": "^3.6.2",
+    "turbo": "^2.5.6",
+    "typescript": "^5.9.2"
+  }
+}

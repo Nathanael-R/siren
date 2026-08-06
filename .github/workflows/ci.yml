@@ -1,0 +1,30 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.16.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.13.0, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm generate:check
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm registry:validate
+      - run: pnpm build
+      - run: pnpm check:exports
+      - run: pnpm check:size
+      - run: pnpm check:duplicates
+      - run: pnpm check:deps
+      - run: pnpm --filter @siren-ui/playground exec expo-doctor
+      - run: pnpm --filter @siren-ui/playground exec expo install --check
+      - run: pnpm playground:export
+      - run: pnpm docs:build
+      - run: pnpm changeset status

@@ -1,0 +1,6 @@
+pnpm-lock.yaml
+docs/product-spec.md
+apps/playground/siren/
+apps/docs/registry-examples/
+apps/docs/public/r/registry.json
+packages/registry/generated/
