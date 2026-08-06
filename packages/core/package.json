@@ -1,0 +1,52 @@
+{
+  "name": "@siren-ui/core",
+  "version": "0.1.0-alpha.1",
+  "description": "Small framework-independent types and utilities for Siren voice interfaces",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    "./recording": {
+      "types": "./dist/recording.d.ts",
+      "import": "./dist/recording.js"
+    },
+    "./recorder-controller": {
+      "types": "./dist/recorder-controller.d.ts",
+      "import": "./dist/recorder-controller.js"
+    },
+    "./waveform": {
+      "types": "./dist/waveform.d.ts",
+      "import": "./dist/waveform.js"
+    },
+    "./ring-buffer": {
+      "types": "./dist/ring-buffer.d.ts",
+      "import": "./dist/ring-buffer.js"
+    },
+    "./accessibility": {
+      "types": "./dist/accessibility.d.ts",
+      "import": "./dist/accessibility.js"
+    },
+    "./time": {
+      "types": "./dist/time.d.ts",
+      "import": "./dist/time.js"
+    },
+    "./warnings": {
+      "types": "./dist/warnings.d.ts",
+      "import": "./dist/warnings.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "tsup": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
