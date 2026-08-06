@@ -1,0 +1,454 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "1970-01-01T00:00:00.000Z",
+  "entries": [
+    {
+      "name": "waveform",
+      "version": "0.1.0-alpha.1",
+      "status": "experimental",
+      "description": "Bounded controlled waveform display for normalized amplitude samples.",
+      "files": [
+        {
+          "path": "components/waveform.tsx",
+          "type": "component",
+          "target": "siren/components/waveform.tsx",
+          "content": "import { describeWaveform } from \"@siren-ui/core/accessibility\";\nimport {\n  bucketSamples,\n  deriveVisibleBucketCount,\n  normalizeAmplitude,\n} from \"@siren-ui/core/waveform\";\nimport { developmentWarning } from \"@siren-ui/core/warnings\";\nimport { memo, useMemo, useState } from \"react\";\nimport {\n  PixelRatio,\n  StyleSheet,\n  View,\n  type LayoutChangeEvent,\n  type StyleProp,\n  type ViewStyle,\n} from \"react-native\";\n\nexport type WaveformProps = {\n  samples: readonly number[];\n  progress?: number;\n  height?: number;\n  barWidth?: number;\n  gap?: number;\n  maximumDensity?: number;\n  color?: string;\n  playedColor?: string;\n  accessibilityLabel?: string;\n  durationMs?: number;\n  reducedMotion?: boolean;\n  style?: StyleProp<ViewStyle>;\n  barStyle?: StyleProp<ViewStyle>;\n  onLayout?: (event: LayoutChangeEvent) => void;\n};\n\nexport const Waveform = memo(function Waveform({\n  samples,\n  progress = 0,\n  height = 48,\n  barWidth = 3,\n  gap = 2,\n  maximumDensity = 240,\n  color = \"#8B929E\",\n  playedColor = \"#266EF1\",\n  accessibilityLabel,\n  durationMs,\n  style,\n  barStyle,\n  onLayout,\n}: WaveformProps) {\n  const [width, setWidth] = useState(0);\n  developmentWarning(\n    \"waveform-height\",\n    height >= 24,\n    \"Waveform heights below 24 points can be difficult to perceive.\",\n  );\n  const safeProgress = normalizeAmplitude(progress);\n  const visible = useMemo(() => {\n    const count = deriveVisibleBucketCount({\n      width,\n      barWidth,\n      gap,\n      maximumDensity,\n      pixelRatio: PixelRatio.get(),\n    });\n    return bucketSamples(samples, count);\n  }, [barWidth, gap, maximumDensity, samples, width]);\n\n  const handleLayout = (event: LayoutChangeEvent) => {\n    setWidth(event.nativeEvent.layout.width);\n    onLayout?.(event);\n  };\n\n  return (\n    <View\n      accessible\n      accessibilityRole=\"image\"\n      accessibilityLabel={\n        accessibilityLabel ??\n        describeWaveform({ durationMs, progress: safeProgress })\n      }\n      onLayout={handleLayout}\n      style={[styles.root, { height, gap }, style]}\n    >\n      {visible.map((sample, index) => {\n        const played =\n          visible.length < 2\n            ? safeProgress > 0\n            : index / (visible.length - 1) <= safeProgress;\n        return (\n          <View\n            key={index}\n            accessible={false}\n            style={[\n              styles.bar,\n              {\n                width: barWidth,\n                height: Math.max(2, sample * height),\n                backgroundColor: played ? playedColor : color,\n              },\n              barStyle,\n            ]}\n          />\n        );\n      })}\n    </View>\n  );\n});\n\nconst styles = StyleSheet.create({\n  root: { flexDirection: \"row\", alignItems: \"center\", overflow: \"hidden\" },\n  bar: { borderRadius: 999 },\n});\n",
+          "hash": "6bb900934277b67ebdc0e3a4b47788933f562f49c4bb3747f691bd8f571aad38"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "@siren-ui/core"
+      ],
+      "peerDependencies": {
+        "react": ">=19.2",
+        "react-native": ">=0.85 <0.87"
+      },
+      "requiresCore": "^0.1.0",
+      "platforms": {
+        "ios": "supported",
+        "android": "supported",
+        "web": "experimental"
+      },
+      "expoGo": true,
+      "developmentBuildRequired": false,
+      "nativeConfiguration": []
+    },
+    {
+      "name": "live-waveform",
+      "version": "0.1.0-alpha.1",
+      "status": "experimental",
+      "description": "A bounded live waveform that updates fixed native bars without React state per sample.",
+      "files": [
+        {
+          "path": "components/live-waveform.tsx",
+          "type": "component",
+          "target": "siren/components/live-waveform.tsx",
+          "content": "import { normalizeAmplitude } from \"@siren-ui/core/waveform\";\nimport { developmentWarning } from \"@siren-ui/core/warnings\";\nimport { memo, useEffect } from \"react\";\nimport { StyleSheet, View, type StyleProp, type ViewStyle } from \"react-native\";\nimport Animated, {\n  useAnimatedStyle,\n  useSharedValue,\n  type SharedValue,\n} from \"react-native-reanimated\";\n\nexport type LiveWaveformProps = {\n  sample: number;\n  historySize?: number;\n  paused?: boolean;\n  direction?: \"left-to-right\" | \"right-to-left\";\n  height?: number;\n  color?: string;\n  reducedMotion?: boolean;\n  accessibilityLabel?: string;\n  style?: StyleProp<ViewStyle>;\n};\n\nfunction LiveBar({\n  values,\n  index,\n  height,\n  color,\n  reducedMotion,\n}: {\n  values: SharedValue<number[]>;\n  index: number;\n  height: number;\n  color: string;\n  reducedMotion: boolean;\n}) {\n  const animatedStyle = useAnimatedStyle(() => {\n    const value = values.value[index] ?? 0.04;\n    return {\n      transform: [{ scaleY: reducedMotion ? 0.35 : Math.max(0.04, value) }],\n    };\n  }, [height, index, reducedMotion]);\n  return (\n    <Animated.View\n      style={[styles.bar, { height, backgroundColor: color }, animatedStyle]}\n    />\n  );\n}\n\nexport const LiveWaveform = memo(function LiveWaveform({\n  sample,\n  historySize = 48,\n  paused = false,\n  direction = \"left-to-right\",\n  height = 48,\n  color = \"#266EF1\",\n  reducedMotion = false,\n  accessibilityLabel = \"Live microphone level\",\n  style,\n}: LiveWaveformProps) {\n  const safeSize = Math.max(4, Math.min(160, Math.floor(historySize)));\n  const values = useSharedValue(new Array<number>(safeSize).fill(0.04));\n  developmentWarning(\n    \"live-history\",\n    historySize <= 160,\n    \"LiveWaveform history is capped at 160 samples to keep work bounded.\",\n  );\n\n  useEffect(() => {\n    if (paused) return;\n    const next = values.value.slice(1);\n    next.push(normalizeAmplitude(sample));\n    values.value = next;\n  }, [paused, sample, values]);\n\n  return (\n    <View\n      accessible\n      accessibilityRole=\"image\"\n      accessibilityLabel={accessibilityLabel}\n      accessibilityState={{ disabled: paused }}\n      style={[\n        styles.root,\n        direction === \"right-to-left\" && styles.reverse,\n        { height },\n        style,\n      ]}\n    >\n      {Array.from({ length: safeSize }, (_, index) => (\n        <LiveBar\n          key={index}\n          values={values}\n          index={index}\n          height={height}\n          color={color}\n          reducedMotion={reducedMotion}\n        />\n      ))}\n    </View>\n  );\n});\n\nconst styles = StyleSheet.create({\n  root: {\n    flexDirection: \"row\",\n    alignItems: \"center\",\n    gap: 2,\n    overflow: \"hidden\",\n  },\n  reverse: { flexDirection: \"row-reverse\" },\n  bar: { flex: 1, minWidth: 1, borderRadius: 999 },\n});\n",
+          "hash": "591dc827dce78ca74ca33cc00bbc2b7b4408a7cbe293a5b5d701b8dea7c36a71"
+        },
+        {
+          "path": "hooks/use-live-waveform.tsx",
+          "type": "hook",
+          "target": "siren/hooks/use-live-waveform.tsx",
+          "content": "import {\n  decibelsToAmplitude,\n  normalizeAmplitude,\n} from \"@siren-ui/core/waveform\";\nimport { useCallback } from \"react\";\nimport type { SharedValue } from \"react-native-reanimated\";\n\nexport function appendLiveSample(\n  buffer: SharedValue<number[]>,\n  sample: number,\n  historySize: number,\n): void {\n  \"worklet\";\n  const next = buffer.value.slice(\n    Math.max(0, buffer.value.length - historySize + 1),\n  );\n  next.push(normalizeAmplitude(sample));\n  buffer.value = next;\n}\n\nexport function useExpoMeteringSample(onSample: (sample: number) => void) {\n  return useCallback(\n    (meteringDb: number | undefined) => {\n      if (meteringDb !== undefined) onSample(decibelsToAmplitude(meteringDb));\n    },\n    [onSample],\n  );\n}\n",
+          "hash": "121408dc6987d508680ba3d0d793c71478939da5ec3966606e4110b77ce891e7"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "@siren-ui/core",
+        "react-native-reanimated"
+      ],
+      "peerDependencies": {
+        "react": ">=19.2",
+        "react-native": ">=0.85 <0.87",
+        "react-native-reanimated": ">=4.3 <4.6"
+      },
+      "requiresCore": "^0.1.0",
+      "platforms": {
+        "ios": "supported",
+        "android": "supported",
+        "web": "experimental"
+      },
+      "expoGo": true,
+      "developmentBuildRequired": false,
+      "nativeConfiguration": [
+        "Install the Expo-compatible Reanimated and Worklets versions."
+      ]
+    },
+    {
+      "name": "waveform-scrubber",
+      "version": "0.1.0-alpha.1",
+      "status": "experimental",
+      "description": "Accessible tap and drag seeking over a normalized waveform.",
+      "files": [
+        {
+          "path": "components/waveform-scrubber.tsx",
+          "type": "component",
+          "target": "siren/components/waveform-scrubber.tsx",
+          "content": "import { adjustableStep } from \"@siren-ui/core/accessibility\";\nimport { normalizeAmplitude } from \"@siren-ui/core/waveform\";\nimport { developmentWarning } from \"@siren-ui/core/warnings\";\nimport { useMemo, useRef, useState } from \"react\";\nimport {\n  I18nManager,\n  StyleSheet,\n  View,\n  type AccessibilityActionEvent,\n  type LayoutChangeEvent,\n  type StyleProp,\n  type ViewStyle,\n} from \"react-native\";\nimport { Gesture, GestureDetector } from \"react-native-gesture-handler\";\nimport { Waveform } from \"./waveform\";\n\nexport type WaveformScrubberProps = {\n  samples: readonly number[];\n  positionMs: number;\n  durationMs: number;\n  onSeekPreview?: (positionMs: number) => void;\n  onSeek: (positionMs: number) => void;\n  height?: number;\n  disabled?: boolean;\n  reducedMotion?: boolean;\n  accessibilityLabel?: string;\n  style?: StyleProp<ViewStyle>;\n};\n\nexport function WaveformScrubber({\n  samples,\n  positionMs,\n  durationMs,\n  onSeekPreview,\n  onSeek,\n  height = 52,\n  disabled = false,\n  reducedMotion,\n  accessibilityLabel = \"Audio position\",\n  style,\n}: WaveformScrubberProps) {\n  const width = useRef(1);\n  const lastPreviewAt = useRef(0);\n  const [previewMs, setPreviewMs] = useState<number>();\n  developmentWarning(\n    \"scrubber-height\",\n    height >= 44,\n    \"WaveformScrubber should be at least 44 points tall for a safe touch target.\",\n  );\n\n  const toPosition = (x: number) => {\n    const ratio = normalizeAmplitude(x / width.current);\n    return (I18nManager.isRTL ? 1 - ratio : ratio) * Math.max(0, durationMs);\n  };\n\n  const gesture = useMemo(\n    () =>\n      Gesture.Race(\n        Gesture.Pan()\n          .enabled(!disabled)\n          .runOnJS(true)\n          .onUpdate(({ x }) => {\n            const next = toPosition(x);\n            setPreviewMs(next);\n            const now = Date.now();\n            if (now - lastPreviewAt.current >= 100) {\n              lastPreviewAt.current = now;\n              onSeekPreview?.(next);\n            }\n          })\n          .onEnd(({ x }) => {\n            const next = toPosition(x);\n            setPreviewMs(undefined);\n            onSeek(next);\n          })\n          .onFinalize(() => setPreviewMs(undefined)),\n        Gesture.Tap()\n          .enabled(!disabled)\n          .runOnJS(true)\n          .onEnd(({ x }) => onSeek(toPosition(x))),\n      ),\n    [disabled, durationMs, onSeek, onSeekPreview],\n  );\n\n  const onAccessibilityAction = (event: AccessibilityActionEvent) => {\n    if (\n      event.nativeEvent.actionName !== \"increment\" &&\n      event.nativeEvent.actionName !== \"decrement\"\n    )\n      return;\n    onSeek(\n      adjustableStep(positionMs, durationMs, event.nativeEvent.actionName),\n    );\n  };\n\n  const onLayout = (event: LayoutChangeEvent) => {\n    width.current = Math.max(1, event.nativeEvent.layout.width);\n  };\n  const shownPosition = previewMs ?? positionMs;\n\n  return (\n    <GestureDetector gesture={gesture}>\n      <View\n        accessible\n        accessibilityRole=\"adjustable\"\n        accessibilityLabel={accessibilityLabel}\n        accessibilityValue={{\n          min: 0,\n          max: Math.max(0, Math.round(durationMs)),\n          now: Math.round(shownPosition),\n          text: `${Math.round(shownPosition / 1000)} seconds`,\n        }}\n        accessibilityActions={[\n          { name: \"increment\", label: \"Seek forward\" },\n          { name: \"decrement\", label: \"Seek backward\" },\n        ]}\n        onAccessibilityAction={onAccessibilityAction}\n        onLayout={onLayout}\n        style={[styles.touchArea, { minHeight: height }, style]}\n      >\n        <Waveform\n          samples={samples}\n          progress={durationMs > 0 ? shownPosition / durationMs : 0}\n          height={Math.max(24, height - 12)}\n          reducedMotion={reducedMotion}\n        />\n      </View>\n    </GestureDetector>\n  );\n}\n\nconst styles = StyleSheet.create({\n  touchArea: { justifyContent: \"center\", width: \"100%\" },\n});\n",
+          "hash": "3a16665258f74a39c5979f2cc311db3f99616a3ba69f6d2431540bba97994eaa"
+        }
+      ],
+      "registryDependencies": [
+        "waveform"
+      ],
+      "dependencies": [
+        "@siren-ui/core",
+        "react-native-gesture-handler"
+      ],
+      "peerDependencies": {
+        "react": ">=19.2",
+        "react-native": ">=0.85 <0.87",
+        "react-native-gesture-handler": ">=2.28 <3"
+      },
+      "requiresCore": "^0.1.0",
+      "platforms": {
+        "ios": "supported",
+        "android": "supported",
+        "web": "experimental"
+      },
+      "expoGo": true,
+      "developmentBuildRequired": false,
+      "nativeConfiguration": [
+        "Wrap the application root and modal roots with GestureHandlerRootView."
+      ]
+    },
+    {
+      "name": "hold-to-record",
+      "version": "0.1.0-alpha.2",
+      "status": "experimental",
+      "description": "Hold, slide-to-cancel, and slide-to-lock recording gesture primitive.",
+      "files": [
+        {
+          "path": "components/hold-to-record.tsx",
+          "type": "component",
+          "target": "siren/components/hold-to-record.tsx",
+          "content": "import { developmentWarning } from \"@siren-ui/core/warnings\";\nimport * as Haptics from \"expo-haptics\";\nimport { useMemo } from \"react\";\nimport {\n  I18nManager,\n  Pressable,\n  StyleSheet,\n  Text,\n  View,\n  type StyleProp,\n  type ViewStyle,\n} from \"react-native\";\nimport { Gesture, GestureDetector } from \"react-native-gesture-handler\";\n\nexport type HoldToRecordProps = {\n  active: boolean;\n  locked?: boolean;\n  disabled?: boolean;\n  cancelThreshold?: number;\n  lockThreshold?: number;\n  holdDelayMs?: number;\n  onStart: () => void;\n  onCancel: () => void;\n  onLock: () => void;\n  onRelease: () => void;\n  label?: string;\n  cancelLabel?: string;\n  lockLabel?: string;\n  style?: StyleProp<ViewStyle>;\n};\n\nexport function HoldToRecord({\n  active,\n  locked = false,\n  disabled = false,\n  cancelThreshold = 88,\n  lockThreshold = 72,\n  holdDelayMs = 180,\n  onStart,\n  onCancel,\n  onLock,\n  onRelease,\n  label = \"Hold to record\",\n  cancelLabel = \"Cancel recording\",\n  lockLabel = \"Lock recording\",\n  style,\n}: HoldToRecordProps) {\n  developmentWarning(\n    \"hold-target\",\n    cancelThreshold >= 64 && lockThreshold >= 56,\n    \"Hold gesture thresholds may be too small to avoid accidental actions.\",\n  );\n  let cancelled = false;\n  let didLock = false;\n  const gesture = useMemo(\n    () =>\n      Gesture.Pan()\n        .enabled(!disabled && !locked)\n        .activateAfterLongPress(holdDelayMs)\n        .runOnJS(true)\n        .onBegin(() => {\n          cancelled = false;\n          didLock = false;\n          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);\n          onStart();\n        })\n        .onUpdate(({ translationX, translationY }) => {\n          const cancelDistance = I18nManager.isRTL\n            ? translationX\n            : -translationX;\n          if (!cancelled && cancelDistance >= cancelThreshold) {\n            cancelled = true;\n            void Haptics.notificationAsync(\n              Haptics.NotificationFeedbackType.Warning,\n            );\n            onCancel();\n          } else if (!didLock && -translationY >= lockThreshold) {\n            didLock = true;\n            void Haptics.selectionAsync();\n            onLock();\n          }\n        })\n        .onEnd(() => {\n          if (!cancelled && !didLock) onRelease();\n        }),\n    [\n      cancelThreshold,\n      disabled,\n      holdDelayMs,\n      lockThreshold,\n      locked,\n      onCancel,\n      onLock,\n      onRelease,\n      onStart,\n    ],\n  );\n\n  return (\n    <View style={[styles.container, style]}>\n      <GestureDetector gesture={gesture}>\n        <Pressable\n          accessibilityRole=\"button\"\n          accessibilityLabel={label}\n          accessibilityHint=\"Double tap to start recording, or press and hold then slide left to cancel or up to lock\"\n          accessibilityState={{ disabled, selected: active }}\n          disabled={disabled}\n          onPress={active ? onRelease : onStart}\n          style={({ pressed }) => [\n            styles.record,\n            active && styles.active,\n            pressed && styles.pressed,\n          ]}\n        >\n          <View style={styles.recordGlyph} />\n          <Text style={styles.label}>{active ? \"Release to stop\" : label}</Text>\n        </Pressable>\n      </GestureDetector>\n      {active ? (\n        <View style={styles.alternatives}>\n          <Pressable\n            accessibilityRole=\"button\"\n            accessibilityLabel={cancelLabel}\n            onPress={onCancel}\n            style={styles.action}\n          >\n            <Text>{cancelLabel}</Text>\n          </Pressable>\n          {!locked ? (\n            <Pressable\n              accessibilityRole=\"button\"\n              accessibilityLabel={lockLabel}\n              onPress={onLock}\n              style={styles.action}\n            >\n              <Text>{lockLabel}</Text>\n            </Pressable>\n          ) : null}\n        </View>\n      ) : null}\n    </View>\n  );\n}\n\nconst styles = StyleSheet.create({\n  container: { gap: 10 },\n  record: {\n    minHeight: 52,\n    minWidth: 160,\n    paddingHorizontal: 18,\n    borderRadius: 18,\n    backgroundColor: \"#ECEEF2\",\n    flexDirection: \"row\",\n    alignItems: \"center\",\n    justifyContent: \"center\",\n    gap: 10,\n  },\n  active: { backgroundColor: \"#FFE5E7\" },\n  pressed: { opacity: 0.7 },\n  recordGlyph: {\n    width: 14,\n    height: 14,\n    borderRadius: 7,\n    backgroundColor: \"#D92D3A\",\n  },\n  label: { color: \"#15171A\", fontSize: 16, fontWeight: \"600\" },\n  alternatives: { flexDirection: \"row\", gap: 8, justifyContent: \"center\" },\n  action: {\n    minHeight: 44,\n    paddingHorizontal: 14,\n    justifyContent: \"center\",\n    borderRadius: 12,\n    borderWidth: StyleSheet.hairlineWidth,\n    borderColor: \"#8B929E\",\n  },\n});\n",
+          "hash": "8a25938313987cf118b1383bf6053e63cd7a5948ba5a7d459211118677469d1c"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "@siren-ui/core",
+        "expo-haptics",
+        "react-native-gesture-handler"
+      ],
+      "peerDependencies": {
+        "react": ">=19.2",
+        "react-native": ">=0.85 <0.87",
+        "react-native-gesture-handler": ">=2.28 <3"
+      },
+      "requiresCore": "^0.1.0",
+      "platforms": {
+        "ios": "supported",
+        "android": "supported",
+        "web": "experimental"
+      },
+      "expoGo": true,
+      "developmentBuildRequired": false,
+      "nativeConfiguration": [
+        "Wrap the application root and modal roots with GestureHandlerRootView."
+      ]
+    },
+    {
+      "name": "recording-timer",
+      "version": "0.1.0-alpha.2",
+      "status": "experimental",
+      "description": "Accessible millisecond recording timer with warning and maximum-duration states.",
+      "files": [
+        {
+          "path": "components/recording-timer.tsx",
+          "type": "component",
+          "target": "siren/components/recording-timer.tsx",
+          "content": "import { formatDuration } from \"@siren-ui/core/time\";\nimport { memo } from \"react\";\nimport {\n  StyleSheet,\n  Text,\n  View,\n  type StyleProp,\n  type TextStyle,\n  type ViewStyle,\n} from \"react-native\";\n\nexport type RecordingTimerProps = {\n  durationMs: number;\n  state: \"recording\" | \"paused\" | \"processing\";\n  warningThresholdMs?: number;\n  maximumDurationMs?: number;\n  style?: StyleProp<ViewStyle>;\n  textStyle?: StyleProp<TextStyle>;\n};\n\nexport const RecordingTimer = memo(function RecordingTimer({\n  durationMs,\n  state,\n  warningThresholdMs,\n  maximumDurationMs,\n  style,\n  textStyle,\n}: RecordingTimerProps) {\n  const warning =\n    warningThresholdMs !== undefined && durationMs >= warningThresholdMs;\n  const current = formatDuration(durationMs);\n  const maximum =\n    maximumDurationMs === undefined\n      ? undefined\n      : formatDuration(maximumDurationMs);\n  const stateLabel =\n    state === \"recording\"\n      ? \"Recording\"\n      : state === \"paused\"\n        ? \"Recording paused\"\n        : \"Processing recording\";\n  return (\n    <View\n      accessible\n      accessibilityRole=\"timer\"\n      accessibilityLabel={`${stateLabel}, ${current}${maximum ? ` of ${maximum}` : \"\"}`}\n      accessibilityLiveRegion=\"polite\"\n      style={[styles.root, style]}\n    >\n      <Text style={[styles.time, warning && styles.warning, textStyle]}>\n        {current}\n        {maximum ? ` / ${maximum}` : \"\"}\n      </Text>\n      <Text style={styles.state}>{stateLabel}</Text>\n    </View>\n  );\n});\n\nconst styles = StyleSheet.create({\n  root: { alignItems: \"center\", gap: 3 },\n  time: {\n    color: \"#15171A\",\n    fontSize: 20,\n    fontVariant: [\"tabular-nums\"],\n    fontWeight: \"600\",\n  },\n  warning: { color: \"#A12A34\" },\n  state: { color: \"#5D6470\", fontSize: 13 },\n});\n",
+          "hash": "cba35f7bb45cfaa845429d2e0aeb67161bbee8d79b64f1ee63ad6728b0ac127e"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "@siren-ui/core"
+      ],
+      "peerDependencies": {
+        "react": ">=19.2",
+        "react-native": ">=0.85 <0.87"
+      },
+      "requiresCore": "^0.1.0",
+      "platforms": {
+        "ios": "supported",
+        "android": "supported",
+        "web": "experimental"
+      },
+      "expoGo": true,
+      "developmentBuildRequired": false,
+      "nativeConfiguration": []
+    },
+    {
+      "name": "audio-permission-gate",
+      "version": "0.1.0-alpha.2",
+      "status": "experimental",
+      "description": "Explicit microphone permission state gate with application-owned presentation.",
+      "files": [
+        {
+          "path": "components/audio-permission-gate.tsx",
+          "type": "component",
+          "target": "siren/components/audio-permission-gate.tsx",
+          "content": "import type { ReactNode } from \"react\";\nimport {\n  Platform,\n  Pressable,\n  StyleSheet,\n  Text,\n  View,\n  type StyleProp,\n  type ViewStyle,\n} from \"react-native\";\nimport {\n  useAudioPermission,\n  type AudioPermissionState,\n} from \"../hooks/use-audio-permission\";\n\nexport type AudioPermissionGateRenderState = {\n  state: AudioPermissionState;\n  request: () => Promise<AudioPermissionState>;\n  openSettings: () => Promise<void>;\n};\n\nexport type AudioPermissionGateProps = {\n  children: ReactNode | ((state: AudioPermissionGateRenderState) => ReactNode);\n  renderFallback?: (state: AudioPermissionGateRenderState) => ReactNode;\n  labels?: Partial<\n    Record<\"request\" | \"denied\" | \"blocked\" | \"settings\", string>\n  >;\n  style?: StyleProp<ViewStyle>;\n};\n\nexport function AudioPermissionGate({\n  children,\n  renderFallback,\n  labels,\n  style,\n}: AudioPermissionGateProps) {\n  const permission = useAudioPermission();\n  const state: AudioPermissionGateRenderState = {\n    state: permission.state,\n    request: permission.request,\n    openSettings: permission.openSettings,\n  };\n  if (permission.state === \"granted\")\n    return <>{typeof children === \"function\" ? children(state) : children}</>;\n  if (renderFallback) return <>{renderFallback(state)}</>;\n  const blockedCopy = Platform.select({\n    ios: \"Enable microphone access in Settings to record audio.\",\n    android: \"Allow microphone access in system settings to record audio.\",\n    default: \"Microphone access is blocked.\",\n  });\n  return (\n    <View accessible accessibilityRole=\"summary\" style={[styles.root, style]}>\n      <Text style={styles.title}>\n        {permission.state === \"blocked\"\n          ? (labels?.blocked ?? blockedCopy)\n          : (labels?.denied ?? \"Microphone access is needed to record audio.\")}\n      </Text>\n      {permission.state === \"blocked\" ? (\n        <Pressable\n          accessibilityRole=\"button\"\n          onPress={() => void permission.openSettings()}\n          style={styles.button}\n        >\n          <Text style={styles.buttonLabel}>\n            {labels?.settings ?? \"Open settings\"}\n          </Text>\n        </Pressable>\n      ) : permission.state === \"unknown\" ? (\n        <Text style={styles.detail}>Checking microphone access…</Text>\n      ) : (\n        <Pressable\n          accessibilityRole=\"button\"\n          onPress={() => void permission.request()}\n          style={styles.button}\n        >\n          <Text style={styles.buttonLabel}>\n            {labels?.request ?? \"Allow microphone\"}\n          </Text>\n        </Pressable>\n      )}\n    </View>\n  );\n}\n\nconst styles = StyleSheet.create({\n  root: { padding: 16, gap: 12, borderRadius: 16, backgroundColor: \"#F3F4F6\" },\n  title: { color: \"#15171A\", fontSize: 16 },\n  detail: { color: \"#5D6470\" },\n  button: {\n    minHeight: 44,\n    paddingHorizontal: 16,\n    alignSelf: \"flex-start\",\n    justifyContent: \"center\",\n    borderRadius: 12,\n    backgroundColor: \"#15171A\",\n  },\n  buttonLabel: { color: \"#FFFFFF\", fontWeight: \"600\" },\n});\n",
+          "hash": "d72eeaa099d765a285e89b821f62de615f81aca01b69493c73c5ae387ee6f046"
+        },
+        {
+          "path": "hooks/use-audio-permission.tsx",
+          "type": "hook",
+          "target": "siren/hooks/use-audio-permission.tsx",
+          "content": "import { useCallback, useEffect, useState } from \"react\";\nimport { Linking } from \"react-native\";\nimport { AudioModule } from \"expo-audio\";\n\nexport type AudioPermissionState =\n  \"unknown\" | \"requestable\" | \"granted\" | \"denied\" | \"blocked\";\n\nfunction mapPermission(permission: {\n  granted: boolean;\n  canAskAgain: boolean;\n  status: string;\n}): AudioPermissionState {\n  if (permission.granted) return \"granted\";\n  if (permission.status === \"undetermined\") return \"requestable\";\n  return permission.canAskAgain ? \"denied\" : \"blocked\";\n}\n\nexport function useAudioPermission() {\n  const [state, setState] = useState<AudioPermissionState>(\"unknown\");\n  useEffect(() => {\n    let active = true;\n    void AudioModule.getRecordingPermissionsAsync().then((result) => {\n      if (active) setState(mapPermission(result));\n    });\n    return () => {\n      active = false;\n    };\n  }, []);\n\n  const request = useCallback(async () => {\n    const result = await AudioModule.requestRecordingPermissionsAsync();\n    const next = mapPermission(result);\n    setState(next);\n    return next;\n  }, []);\n\n  const openSettings = useCallback(() => Linking.openSettings(), []);\n  return {\n    state,\n    request,\n    openSettings,\n    refresh: async () =>\n      setState(mapPermission(await AudioModule.getRecordingPermissionsAsync())),\n  };\n}\n",
+          "hash": "1ab00f4db6892a552a52f221314a5cafc165ad4822f156d3ae2f4909ff532798"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "expo-audio"
+      ],
+      "peerDependencies": {
+        "react": ">=19.2",
+        "react-native": ">=0.85 <0.87"
+      },
+      "platforms": {
+        "ios": "supported",
+        "android": "supported",
+        "web": "experimental"
+      },
+      "expoGo": true,
+      "developmentBuildRequired": false,
+      "nativeConfiguration": [
+        "Set a meaningful iOS microphone permission description through the expo-audio config plugin."
+      ]
+    },
+    {
+      "name": "audio-status-indicator",
+      "version": "0.1.0-beta.1",
+      "status": "experimental",
+      "description": "Neutral accessible presentation for meaningful audio lifecycle states.",
+      "files": [
+        {
+          "path": "components/audio-status-indicator.tsx",
+          "type": "component",
+          "target": "siren/components/audio-status-indicator.tsx",
+          "content": "import { memo, type ReactNode } from \"react\";\nimport {\n  StyleSheet,\n  Text,\n  View,\n  type StyleProp,\n  type ViewStyle,\n} from \"react-native\";\n\nexport type AudioStatus =\n  | \"loading\"\n  | \"buffering\"\n  | \"ready\"\n  | \"playing\"\n  | \"paused\"\n  | \"recording\"\n  | \"interrupted\"\n  | \"route-changed\"\n  | \"recovering\"\n  | \"error\";\nconst defaults: Record<AudioStatus, string> = {\n  loading: \"Loading audio\",\n  buffering: \"Buffering\",\n  ready: \"Ready\",\n  playing: \"Playing\",\n  paused: \"Paused\",\n  recording: \"Recording\",\n  interrupted: \"Audio interrupted\",\n  \"route-changed\": \"Audio route changed\",\n  recovering: \"Recovering audio\",\n  error: \"Audio error\",\n};\n\nexport const AudioStatusIndicator = memo(function AudioStatusIndicator({\n  status,\n  label,\n  icon,\n  style,\n}: {\n  status: AudioStatus;\n  label?: string;\n  icon?: ReactNode;\n  style?: StyleProp<ViewStyle>;\n}) {\n  const text = label ?? defaults[status];\n  return (\n    <View\n      accessible\n      accessibilityRole=\"text\"\n      accessibilityLabel={text}\n      accessibilityLiveRegion=\"polite\"\n      style={[styles.root, style]}\n    >\n      {icon}\n      <View style={[styles.dot, status === \"error\" && styles.error]} />\n      <Text style={styles.label}>{text}</Text>\n    </View>\n  );\n});\n\nconst styles = StyleSheet.create({\n  root: { minHeight: 28, flexDirection: \"row\", alignItems: \"center\", gap: 7 },\n  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: \"#357A57\" },\n  error: { backgroundColor: \"#B4232F\" },\n  label: { color: \"#454B55\", fontSize: 13 },\n});\n",
+          "hash": "0345982c87e7c6dfe82fcb416981c146ed1549dc810fee86f5c6b2453dbd0e61"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": [],
+      "peerDependencies": {
+        "react": ">=19.2",
+        "react-native": ">=0.85 <0.87"
+      },
+      "platforms": {
+        "ios": "supported",
+        "android": "supported",
+        "web": "experimental"
+      },
+      "expoGo": true,
+      "developmentBuildRequired": false,
+      "nativeConfiguration": []
+    },
+    {
+      "name": "agent-visualizer",
+      "version": "0.1.0-alpha.1",
+      "status": "experimental",
+      "description": "Behavior-led orb, waveform-field, and radial-bars agent visualization variants.",
+      "files": [
+        {
+          "path": "components/agent-visualizer.tsx",
+          "type": "component",
+          "target": "siren/components/agent-visualizer.tsx",
+          "content": "import type { AgentVisualizerState } from \"@siren-ui/core/recording\";\nimport { normalizeAmplitude } from \"@siren-ui/core/waveform\";\nimport { memo, useEffect } from \"react\";\nimport { StyleSheet, View, type StyleProp, type ViewStyle } from \"react-native\";\nimport Animated, {\n  useAnimatedStyle,\n  useSharedValue,\n  withTiming,\n} from \"react-native-reanimated\";\n\nexport type AgentVisualizerProps = {\n  state: AgentVisualizerState;\n  inputLevel?: number;\n  outputLevel?: number;\n  variant?: \"orb\" | \"waveform-field\" | \"radial-bars\";\n  reducedMotion?: boolean;\n  lowPerformanceMode?: boolean;\n  accessibilityLabel?: string;\n  style?: StyleProp<ViewStyle>;\n};\n\nconst stateScale: Record<AgentVisualizerState, number> = {\n  idle: 0.72,\n  listening: 0.9,\n  thinking: 0.82,\n  speaking: 1,\n};\n\nexport const AgentVisualizer = memo(function AgentVisualizer({\n  state,\n  inputLevel = 0,\n  outputLevel = 0,\n  variant = \"orb\",\n  reducedMotion = false,\n  lowPerformanceMode = false,\n  accessibilityLabel,\n  style,\n}: AgentVisualizerProps) {\n  const level =\n    state === \"speaking\"\n      ? normalizeAmplitude(outputLevel)\n      : normalizeAmplitude(inputLevel);\n  const animatedLevel = useSharedValue(level);\n  const animatedState = useSharedValue(stateScale[state]);\n  useEffect(() => {\n    animatedLevel.value = reducedMotion\n      ? level\n      : withTiming(level, { duration: 90 });\n    animatedState.value = reducedMotion\n      ? stateScale[state]\n      : withTiming(stateScale[state], { duration: 220 });\n  }, [animatedLevel, animatedState, level, reducedMotion, state]);\n  const orbStyle = useAnimatedStyle(() => ({\n    transform: [{ scale: animatedState.value + animatedLevel.value * 0.16 }],\n    opacity: 0.7 + animatedLevel.value * 0.3,\n  }));\n  const count = lowPerformanceMode ? 8 : variant === \"orb\" ? 3 : 20;\n  return (\n    <View\n      accessible\n      accessibilityRole=\"image\"\n      accessibilityLabel={accessibilityLabel ?? `Agent is ${state}`}\n      style={[styles.root, style]}\n    >\n      {variant === \"orb\" ? (\n        <Animated.View style={[styles.orb, orbStyle]}>\n          <View style={styles.orbCore} />\n        </Animated.View>\n      ) : (\n        <View\n          style={[styles.field, variant === \"radial-bars\" && styles.radial]}\n        >\n          {Array.from({ length: count }, (_, index) => (\n            <VisualizerBar\n              key={index}\n              index={index}\n              count={count}\n              level={animatedLevel}\n              radial={variant === \"radial-bars\"}\n              reducedMotion={reducedMotion}\n            />\n          ))}\n        </View>\n      )}\n    </View>\n  );\n});\n\nfunction VisualizerBar({\n  index,\n  count,\n  level,\n  radial,\n  reducedMotion,\n}: {\n  index: number;\n  count: number;\n  level: { value: number };\n  radial: boolean;\n  reducedMotion: boolean;\n}) {\n  const style = useAnimatedStyle(() => ({\n    transform: [\n      { rotate: radial ? `${(index / count) * 360}deg` : \"0deg\" },\n      {\n        scaleY: reducedMotion\n          ? 0.35\n          : 0.18 + level.value * (0.4 + ((index * 7) % 11) / 16),\n      },\n    ],\n  }));\n  return (\n    <Animated.View\n      style={[styles.visualBar, radial && styles.radialBar, style]}\n    />\n  );\n}\n\nconst styles = StyleSheet.create({\n  root: {\n    minWidth: 120,\n    minHeight: 120,\n    alignItems: \"center\",\n    justifyContent: \"center\",\n    overflow: \"hidden\",\n  },\n  orb: {\n    width: 88,\n    height: 88,\n    borderRadius: 44,\n    backgroundColor: \"#9FC5FF\",\n    alignItems: \"center\",\n    justifyContent: \"center\",\n  },\n  orbCore: {\n    width: 54,\n    height: 54,\n    borderRadius: 27,\n    backgroundColor: \"#266EF1\",\n  },\n  field: {\n    height: 100,\n    width: \"100%\",\n    flexDirection: \"row\",\n    alignItems: \"center\",\n    justifyContent: \"center\",\n    gap: 3,\n  },\n  radial: { width: 110, borderRadius: 55 },\n  visualBar: {\n    width: 4,\n    height: 76,\n    borderRadius: 2,\n    backgroundColor: \"#266EF1\",\n  },\n  radialBar: { position: \"absolute\", height: 96, transformOrigin: \"center\" },\n});\n",
+          "hash": "f154eb5222362612ee49269bad8c668d53b22951fb7159b037b1ecc6f4d7782e"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "@siren-ui/core",
+        "react-native-reanimated"
+      ],
+      "peerDependencies": {
+        "react": ">=19.2",
+        "react-native": ">=0.85 <0.87",
+        "react-native-reanimated": ">=4.3 <4.6"
+      },
+      "requiresCore": "^0.1.0",
+      "platforms": {
+        "ios": "supported",
+        "android": "supported",
+        "web": "experimental"
+      },
+      "expoGo": true,
+      "developmentBuildRequired": false,
+      "nativeConfiguration": [
+        "Install the Expo-compatible Reanimated and Worklets versions."
+      ]
+    },
+    {
+      "name": "recording-preview",
+      "version": "0.1.0-beta.1",
+      "status": "experimental",
+      "description": "Recording confirmation block with playback, scrubbing, speed, discard, and use actions.",
+      "files": [
+        {
+          "path": "components/recording-preview.tsx",
+          "type": "component",
+          "target": "siren/components/recording-preview.tsx",
+          "content": "import type { SirenRecording } from \"@siren-ui/core/recording\";\nimport {\n  Pressable,\n  StyleSheet,\n  Text,\n  View,\n  type StyleProp,\n  type ViewStyle,\n} from \"react-native\";\nimport { VoiceNotePlayer } from \"./voice-note-player\";\n\nexport function RecordingPreview({\n  recording,\n  onDiscard,\n  onConfirm,\n  loading = false,\n  error,\n  style,\n}: {\n  recording: SirenRecording;\n  onDiscard: () => void;\n  onConfirm: (recording: SirenRecording) => void;\n  loading?: boolean;\n  error?: string;\n  style?: StyleProp<ViewStyle>;\n}) {\n  return (\n    <View accessibilityLabel=\"Recording preview\" style={[styles.root, style]}>\n      <VoiceNotePlayer\n        recording={recording}\n        loading={loading}\n        error={!!error}\n      />\n      {error ? (\n        <Text accessibilityRole=\"alert\" style={styles.error}>\n          {error}\n        </Text>\n      ) : null}\n      <View style={styles.actions}>\n        <Pressable\n          accessibilityRole=\"button\"\n          onPress={onDiscard}\n          style={styles.secondary}\n        >\n          <Text>Discard</Text>\n        </Pressable>\n        <Pressable\n          accessibilityRole=\"button\"\n          onPress={() => onConfirm(recording)}\n          disabled={loading}\n          style={styles.primary}\n        >\n          <Text style={styles.primaryText}>Use recording</Text>\n        </Pressable>\n      </View>\n    </View>\n  );\n}\n\nconst styles = StyleSheet.create({\n  root: { gap: 12 },\n  actions: { flexDirection: \"row\", justifyContent: \"flex-end\", gap: 8 },\n  secondary: {\n    minHeight: 44,\n    paddingHorizontal: 16,\n    justifyContent: \"center\",\n    borderRadius: 12,\n    borderWidth: StyleSheet.hairlineWidth,\n    borderColor: \"#8B929E\",\n  },\n  primary: {\n    minHeight: 44,\n    paddingHorizontal: 16,\n    justifyContent: \"center\",\n    borderRadius: 12,\n    backgroundColor: \"#15171A\",\n  },\n  primaryText: { color: \"#FFFFFF\", fontWeight: \"600\" },\n  error: { color: \"#A12A34\" },\n});\n",
+          "hash": "9cd00fde4255094c7ecca61e4bd660f65b410096d70711515aa657b03cea518e"
+        }
+      ],
+      "registryDependencies": [
+        "voice-note-player"
+      ],
+      "dependencies": [
+        "@siren-ui/core"
+      ],
+      "peerDependencies": {
+        "react": ">=19.2",
+        "react-native": ">=0.85 <0.87"
+      },
+      "requiresCore": "^0.1.0",
+      "platforms": {
+        "ios": "supported",
+        "android": "supported",
+        "web": "experimental"
+      },
+      "expoGo": true,
+      "developmentBuildRequired": false,
+      "nativeConfiguration": []
+    },
+    {
+      "name": "voice-note-player",
+      "version": "0.1.0-beta.1",
+      "status": "experimental",
+      "description": "Controlled and Expo-backed voice note playback with waveform seeking and speed controls.",
+      "files": [
+        {
+          "path": "components/voice-note-player.tsx",
+          "type": "component",
+          "target": "siren/components/voice-note-player.tsx",
+          "content": "import type { SirenRecording } from \"@siren-ui/core/recording\";\nimport { memo, useState } from \"react\";\nimport {\n  Pressable,\n  StyleSheet,\n  Text,\n  View,\n  type StyleProp,\n  type ViewStyle,\n} from \"react-native\";\nimport { useVoiceNotePlayer } from \"../hooks/use-voice-note-player\";\nimport { AudioStatusIndicator } from \"./audio-status-indicator\";\nimport { WaveformScrubber } from \"./waveform-scrubber\";\n\nexport type VoiceNotePlayerProps = {\n  recording?: SirenRecording;\n  uri?: string;\n  samples?: readonly number[];\n  playing?: boolean;\n  positionMs?: number;\n  durationMs?: number;\n  loading?: boolean;\n  buffering?: boolean;\n  error?: boolean;\n  onPlay?: () => void;\n  onPause?: () => void;\n  onSeek?: (positionMs: number) => void;\n  onPlaybackRateChange?: (rate: number) => void;\n  playbackRates?: readonly number[];\n  accessibilityLabel?: string;\n  style?: StyleProp<ViewStyle>;\n};\n\nexport const VoiceNotePlayer = memo(function VoiceNotePlayer(\n  props: VoiceNotePlayerProps,\n) {\n  const convenience = useVoiceNotePlayer(props.recording?.uri ?? props.uri);\n  const controlled = props.playing !== undefined;\n  const playing = props.playing ?? convenience.playing;\n  const positionMs = props.positionMs ?? convenience.positionMs;\n  const durationMs =\n    props.durationMs ?? props.recording?.durationMs ?? convenience.durationMs;\n  const samples = props.samples ??\n    props.recording?.waveform ?? [0.2, 0.55, 0.34, 0.8, 0.45, 0.67, 0.28];\n  const loading = props.loading ?? convenience.loading;\n  const buffering = props.buffering ?? convenience.buffering;\n  const rates = props.playbackRates ?? [1, 1.5, 2];\n  const [rateIndex, setRateIndex] = useState(0);\n  const toggle = () => {\n    if (playing) (props.onPause ?? convenience.pause)();\n    else (props.onPlay ?? convenience.play)();\n  };\n  const seek = (next: number) => {\n    if (props.onSeek) props.onSeek(next);\n    else if (!controlled) void convenience.seek(next);\n  };\n  const cycleRate = () => {\n    const nextIndex = (rateIndex + 1) % rates.length;\n    const rate = rates[nextIndex] ?? 1;\n    setRateIndex(nextIndex);\n    props.onPlaybackRateChange?.(rate);\n    if (!controlled) convenience.setRate(rate);\n  };\n  const status = props.error\n    ? \"error\"\n    : loading\n      ? \"loading\"\n      : buffering\n        ? \"buffering\"\n        : playing\n          ? \"playing\"\n          : positionMs > 0\n            ? \"paused\"\n            : \"ready\";\n  return (\n    <View\n      accessibilityLabel={props.accessibilityLabel ?? \"Voice note player\"}\n      style={[styles.root, props.style]}\n    >\n      <View style={styles.row}>\n        <Pressable\n          accessibilityRole=\"button\"\n          accessibilityLabel={playing ? \"Pause voice note\" : \"Play voice note\"}\n          onPress={toggle}\n          disabled={loading || props.error}\n          style={styles.play}\n        >\n          <Text style={styles.playText}>{playing ? \"Pause\" : \"Play\"}</Text>\n        </Pressable>\n        <AudioStatusIndicator status={status} />\n        <Pressable\n          accessibilityRole=\"button\"\n          accessibilityLabel={`Playback speed ${rates[rateIndex] ?? 1} times`}\n          onPress={cycleRate}\n          style={styles.rate}\n        >\n          <Text>{rates[rateIndex] ?? 1}×</Text>\n        </Pressable>\n      </View>\n      <WaveformScrubber\n        samples={samples}\n        positionMs={positionMs}\n        durationMs={durationMs}\n        disabled={loading || !!props.error}\n        onSeek={seek}\n      />\n      <View style={styles.times}>\n        <Text style={styles.time}>{Math.floor(positionMs / 1000)}s</Text>\n        <Text style={styles.time}>{Math.floor(durationMs / 1000)}s</Text>\n      </View>\n    </View>\n  );\n});\n\nconst styles = StyleSheet.create({\n  root: { padding: 14, gap: 8, borderRadius: 18, backgroundColor: \"#F3F4F6\" },\n  row: { flexDirection: \"row\", alignItems: \"center\", gap: 10 },\n  play: {\n    minWidth: 56,\n    minHeight: 44,\n    justifyContent: \"center\",\n    alignItems: \"center\",\n    borderRadius: 14,\n    backgroundColor: \"#15171A\",\n  },\n  playText: { color: \"#FFFFFF\", fontWeight: \"600\" },\n  rate: {\n    minWidth: 44,\n    minHeight: 44,\n    justifyContent: \"center\",\n    alignItems: \"center\",\n    borderRadius: 12,\n    borderWidth: StyleSheet.hairlineWidth,\n    borderColor: \"#8B929E\",\n  },\n  times: { flexDirection: \"row\", justifyContent: \"space-between\" },\n  time: { color: \"#5D6470\", fontVariant: [\"tabular-nums\"] },\n});\n",
+          "hash": "a6b470480d67d7997aca8bd869e9acebe16e1fb090ecc186329aeb1a2417f5e0"
+        },
+        {
+          "path": "hooks/use-voice-note-player.tsx",
+          "type": "hook",
+          "target": "siren/hooks/use-voice-note-player.tsx",
+          "content": "import { useCallback, useEffect, useMemo } from \"react\";\nimport {\n  useAudioPlayer,\n  useAudioPlayerStatus,\n  type AudioSource,\n} from \"expo-audio\";\n\nexport function useVoiceNotePlayer(uri?: string, updateIntervalMs = 100) {\n  const source = useMemo<AudioSource | null>(\n    () => (uri ? { uri } : null),\n    [uri],\n  );\n  const player = useAudioPlayer(source, {\n    updateInterval: updateIntervalMs,\n    downloadFirst: false,\n  });\n  const status = useAudioPlayerStatus(player);\n  useEffect(\n    () => () => {\n      player.pause();\n    },\n    [player],\n  );\n  const seek = useCallback(\n    async (positionMs: number) => {\n      await player.seekTo(Math.max(0, positionMs) / 1000);\n    },\n    [player],\n  );\n  const setRate = useCallback(\n    (rate: number) => player.setPlaybackRate(Math.min(2, Math.max(0.5, rate))),\n    [player],\n  );\n  return {\n    playing: status.playing,\n    loading: !status.isLoaded,\n    buffering: status.isBuffering,\n    didJustFinish: status.didJustFinish,\n    positionMs: status.currentTime * 1000,\n    durationMs: status.duration * 1000,\n    play: () => player.play(),\n    pause: () => player.pause(),\n    seek,\n    setRate,\n  };\n}\n",
+          "hash": "c08f395a3de6fe666f2e1de4fe9526dfba94d62cd82dd616cbe4d713ab3ca1bc"
+        }
+      ],
+      "registryDependencies": [
+        "waveform-scrubber",
+        "audio-status-indicator"
+      ],
+      "dependencies": [
+        "@siren-ui/core",
+        "expo-audio"
+      ],
+      "peerDependencies": {
+        "react": ">=19.2",
+        "react-native": ">=0.85 <0.87"
+      },
+      "requiresCore": "^0.1.0",
+      "platforms": {
+        "ios": "supported",
+        "android": "supported",
+        "web": "experimental"
+      },
+      "expoGo": true,
+      "developmentBuildRequired": false,
+      "nativeConfiguration": []
+    },
+    {
+      "name": "voice-note-recorder",
+      "version": "0.1.0-beta.1",
+      "status": "experimental",
+      "description": "Production-shaped composed recorder using Siren's exported primitives and Expo audio hook.",
+      "files": [
+        {
+          "path": "components/voice-note-recorder.tsx",
+          "type": "component",
+          "target": "siren/components/voice-note-recorder.tsx",
+          "content": "import type {\n  SirenRecording,\n  VoiceNoteRecorderRef,\n} from \"@siren-ui/core/recording\";\nimport { forwardRef, useImperativeHandle } from \"react\";\nimport {\n  Pressable,\n  StyleSheet,\n  Text,\n  View,\n  type StyleProp,\n  type ViewStyle,\n} from \"react-native\";\nimport { useExpoVoiceRecorder } from \"../hooks/use-expo-voice-recorder\";\nimport { AudioStatusIndicator } from \"./audio-status-indicator\";\nimport { HoldToRecord } from \"./hold-to-record\";\nimport { LiveWaveform } from \"./live-waveform\";\nimport { RecordingPreview } from \"./recording-preview\";\nimport { RecordingTimer } from \"./recording-timer\";\n\nexport type VoiceNoteRecorderProps = {\n  minimumDurationMs?: number;\n  maximumDurationMs?: number;\n  warningThresholdMs?: number;\n  requestPermissionOnStart?: boolean;\n  onComplete: (recording: SirenRecording) => void;\n  onError?: (error: unknown) => void;\n  labels?: Partial<Record<\"cancel\" | \"lock\" | \"retry\" | \"record\", string>>;\n  style?: StyleProp<ViewStyle>;\n};\n\nexport const VoiceNoteRecorder = forwardRef<\n  VoiceNoteRecorderRef,\n  VoiceNoteRecorderProps\n>(function VoiceNoteRecorder(\n  {\n    minimumDurationMs,\n    maximumDurationMs,\n    warningThresholdMs,\n    requestPermissionOnStart = false,\n    onComplete,\n    onError,\n    labels,\n    style,\n  },\n  ref,\n) {\n  const recorder = useExpoVoiceRecorder({\n    minimumDurationMs,\n    maximumDurationMs,\n    requestPermissionOnStart,\n    onComplete,\n    onError,\n  });\n  const { snapshot } = recorder;\n  useImperativeHandle(\n    ref,\n    () => ({\n      start: recorder.start,\n      stop: recorder.stop,\n      cancel: recorder.cancel,\n      pause: recorder.pause,\n      resume: recorder.resume,\n    }),\n    [recorder],\n  );\n  if (snapshot.state === \"preview\" && snapshot.recording)\n    return (\n      <RecordingPreview\n        recording={snapshot.recording}\n        onDiscard={recorder.reset}\n        onConfirm={onComplete}\n        style={style}\n      />\n    );\n  if (snapshot.state === \"error\")\n    return (\n      <View style={[styles.root, style]}>\n        <AudioStatusIndicator\n          status=\"error\"\n          label={snapshot.error?.type.replaceAll(\"-\", \" \")}\n        />\n        {snapshot.error?.type === \"recording-interrupted\" &&\n        snapshot.error.partialUri ? (\n          <Text selectable style={styles.message}>\n            A partial recording is available at {snapshot.error.partialUri}\n          </Text>\n        ) : null}\n        <Pressable\n          accessibilityRole=\"button\"\n          onPress={recorder.reset}\n          style={styles.action}\n        >\n          <Text>{labels?.retry ?? \"Try again\"}</Text>\n        </Pressable>\n      </View>\n    );\n  const active =\n    snapshot.state === \"recording\" ||\n    snapshot.state === \"locked\" ||\n    snapshot.state === \"paused\";\n  return (\n    <View accessibilityLabel=\"Voice note recorder\" style={[styles.root, style]}>\n      <AudioStatusIndicator\n        status={\n          snapshot.state === \"processing\"\n            ? \"loading\"\n            : snapshot.state === \"paused\"\n              ? \"paused\"\n              : active\n                ? \"recording\"\n                : \"ready\"\n        }\n      />\n      {active ? (\n        <>\n          <LiveWaveform\n            sample={recorder.sample}\n            paused={snapshot.state === \"paused\"}\n          />\n          <RecordingTimer\n            durationMs={snapshot.durationMs}\n            state={snapshot.state === \"paused\" ? \"paused\" : \"recording\"}\n            warningThresholdMs={warningThresholdMs}\n            maximumDurationMs={maximumDurationMs}\n          />\n        </>\n      ) : null}\n      <HoldToRecord\n        active={active}\n        locked={snapshot.state === \"locked\" || snapshot.state === \"paused\"}\n        disabled={snapshot.state === \"processing\"}\n        onStart={() => void recorder.start()}\n        onCancel={() => void recorder.cancel()}\n        onLock={recorder.lock}\n        onRelease={() => void recorder.stop()}\n        label={labels?.record}\n        cancelLabel={labels?.cancel}\n        lockLabel={labels?.lock}\n      />\n      {snapshot.state === \"locked\" || snapshot.state === \"paused\" ? (\n        <View style={styles.row}>\n          <Pressable\n            accessibilityRole=\"button\"\n            onPress={() =>\n              void (snapshot.state === \"paused\"\n                ? recorder.resume()\n                : recorder.pause())\n            }\n            style={styles.action}\n          >\n            <Text>{snapshot.state === \"paused\" ? \"Resume\" : \"Pause\"}</Text>\n          </Pressable>\n          <Pressable\n            accessibilityRole=\"button\"\n            onPress={() => void recorder.stop()}\n            style={styles.action}\n          >\n            <Text>Finish</Text>\n          </Pressable>\n        </View>\n      ) : null}\n    </View>\n  );\n});\n\nconst styles = StyleSheet.create({\n  root: { padding: 16, gap: 14, borderRadius: 20, backgroundColor: \"#F8F9FA\" },\n  row: { flexDirection: \"row\", gap: 8 },\n  action: {\n    minHeight: 44,\n    paddingHorizontal: 16,\n    justifyContent: \"center\",\n    alignSelf: \"flex-start\",\n    borderRadius: 12,\n    borderWidth: StyleSheet.hairlineWidth,\n    borderColor: \"#8B929E\",\n  },\n  message: { color: \"#5D6470\" },\n});\n",
+          "hash": "450eba0c2e31cd750236bfe622daeca8ea518a117a30a93bb35dc17d26ef0fd8"
+        },
+        {
+          "path": "hooks/use-expo-voice-recorder.tsx",
+          "type": "hook",
+          "target": "siren/hooks/use-expo-voice-recorder.tsx",
+          "content": "import {\n  RecorderController,\n  type RecorderSnapshot,\n} from \"@siren-ui/core/recorder-controller\";\nimport type {\n  SirenRecorderError,\n  SirenRecording,\n} from \"@siren-ui/core/recording\";\nimport { decibelsToAmplitude } from \"@siren-ui/core/waveform\";\nimport { useCallback, useEffect, useMemo, useSyncExternalStore } from \"react\";\nimport {\n  AudioModule,\n  RecordingPresets,\n  setAudioModeAsync,\n  useAudioRecorder,\n  useAudioRecorderState,\n} from \"expo-audio\";\n\nexport type UseExpoVoiceRecorderOptions = {\n  minimumDurationMs?: number;\n  maximumDurationMs?: number;\n  requestPermissionOnStart?: boolean;\n  onComplete?: (recording: SirenRecording) => void;\n  onError?: (error: SirenRecorderError) => void;\n};\n\nexport function useExpoVoiceRecorder(\n  options: UseExpoVoiceRecorderOptions = {},\n) {\n  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);\n  const recorderState = useAudioRecorderState(recorder, 100);\n  const controller = useMemo(\n    () =>\n      new RecorderController({\n        minimumDurationMs: options.minimumDurationMs,\n        maximumDurationMs: options.maximumDurationMs,\n      }),\n    [options.maximumDurationMs, options.minimumDurationMs],\n  );\n  const snapshot = useSyncExternalStore(\n    controller.subscribe,\n    controller.getSnapshot,\n    controller.getSnapshot,\n  );\n  useEffect(() => {\n    if (snapshot.error) options.onError?.(snapshot.error);\n  }, [options, snapshot.error]);\n  useEffect(() => {\n    if (snapshot.state === \"recording\" || snapshot.state === \"locked\")\n      controller.tick();\n  }, [controller, recorderState.durationMillis, snapshot.state]);\n  useEffect(\n    () => () => {\n      if (recorderState.isRecording) void recorder.stop();\n    },\n    [recorder, recorderState.isRecording],\n  );\n\n  const start = useCallback(async () => {\n    try {\n      const permission = await AudioModule.getRecordingPermissionsAsync();\n      if (!permission.granted) {\n        if (!options.requestPermissionOnStart) {\n          controller.requestPermission();\n          controller.permissionResolved(false, permission.canAskAgain);\n          return;\n        }\n        controller.requestPermission();\n        const requested = await AudioModule.requestRecordingPermissionsAsync();\n        if (!requested.granted) {\n          controller.permissionResolved(false, requested.canAskAgain);\n          return;\n        }\n      }\n      await setAudioModeAsync({\n        allowsRecording: true,\n        playsInSilentMode: true,\n        interruptionMode: \"doNotMix\",\n      });\n      await recorder.prepareToRecordAsync();\n      recorder.record();\n      controller.start();\n    } catch (cause) {\n      controller.unavailable(cause);\n    }\n  }, [controller, options.requestPermissionOnStart, recorder]);\n\n  const stop = useCallback(async () => {\n    try {\n      controller.process();\n      await recorder.stop();\n      const uri = recorder.uri;\n      if (!uri) throw new Error(\"expo-audio did not return a recording URI\");\n      const recording = controller.complete({\n        uri,\n        durationMs: recorderState.durationMillis,\n      });\n      if (recording) options.onComplete?.(recording);\n    } catch (cause) {\n      controller.interrupt(recorder.uri ?? undefined, cause);\n    }\n  }, [controller, options, recorder, recorderState.durationMillis]);\n\n  const cancel = useCallback(async () => {\n    try {\n      if (recorderState.isRecording) await recorder.stop();\n    } finally {\n      controller.cancel();\n    }\n  }, [controller, recorder, recorderState.isRecording]);\n  const pause = useCallback(async () => {\n    recorder.pause();\n    controller.pause();\n  }, [controller, recorder]);\n  const resume = useCallback(async () => {\n    recorder.record();\n    controller.resume();\n  }, [controller, recorder]);\n  const lock = useCallback(() => controller.lock(), [controller]);\n  return {\n    snapshot: {\n      ...snapshot,\n      durationMs: recorderState.durationMillis,\n    } as RecorderSnapshot,\n    sample: decibelsToAmplitude(recorderState.metering ?? -60),\n    start,\n    stop,\n    cancel,\n    pause,\n    resume,\n    lock,\n    reset: controller.reset.bind(controller),\n  };\n}\n",
+          "hash": "515f794742c6b5cced5bf958d6de175d053e59065011271a808fa0038e765764"
+        }
+      ],
+      "registryDependencies": [
+        "hold-to-record",
+        "recording-timer",
+        "audio-permission-gate",
+        "live-waveform",
+        "recording-preview",
+        "audio-status-indicator"
+      ],
+      "dependencies": [
+        "@siren-ui/core",
+        "expo-audio"
+      ],
+      "peerDependencies": {
+        "react": ">=19.2",
+        "react-native": ">=0.85 <0.87"
+      },
+      "requiresCore": "^0.1.0",
+      "platforms": {
+        "ios": "supported",
+        "android": "supported",
+        "web": "experimental"
+      },
+      "expoGo": true,
+      "developmentBuildRequired": true,
+      "nativeConfiguration": [
+        "Configure expo-audio microphone permission copy and create a development build for release verification."
+      ]
+    },
+    {
+      "name": "nativewind-voice-note-recipe",
+      "version": "0.1.0",
+      "status": "experimental",
+      "description": "Optional NativeWind composition recipe without making NativeWind a registry dependency.",
+      "files": [
+        {
+          "path": "recipes/nativewind-voice-note.tsx",
+          "type": "recipe",
+          "target": "siren/recipes/nativewind-voice-note.tsx",
+          "content": "import {\n  VoiceNotePlayer,\n  type VoiceNotePlayerProps,\n} from \"../components/voice-note-player\";\n\n// Optional recipe: configure NativeWind in the app, then replace style props with className after copying.\nexport function NativeWindVoiceNoteRecipe(props: VoiceNotePlayerProps) {\n  return <VoiceNotePlayer {...props} />;\n}\n",
+          "hash": "c1bc41561b44e85bc736312036b423d440c57842e52907daf213b5ee31a2ddf1"
+        }
+      ],
+      "registryDependencies": [
+        "voice-note-player"
+      ],
+      "dependencies": [
+        "nativewind"
+      ],
+      "peerDependencies": {
+        "react": ">=19.2",
+        "react-native": ">=0.85 <0.87"
+      },
+      "platforms": {
+        "ios": "supported",
+        "android": "supported",
+        "web": "experimental"
+      },
+      "expoGo": true,
+      "developmentBuildRequired": false,
+      "nativeConfiguration": [
+        "Configure NativeWind in the consuming application."
+      ]
+    }
+  ]
+}

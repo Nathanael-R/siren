@@ -1,0 +1,18 @@
+{
+  "name": "@siren-ui/docs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vitepress build",
+    "clean": "node -e \"require('fs').rmSync('.vitepress/dist',{recursive:true,force:true})\"",
+    "dev": "vitepress dev",
+    "lint": "tsc --noEmit",
+    "test": "node -e \"process.exit(0)\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitepress": "^1.6.4"
+  }
+}
