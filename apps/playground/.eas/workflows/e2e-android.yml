@@ -1,0 +1,21 @@
+name: Siren Android E2E
+on:
+  workflow_dispatch: {}
+jobs:
+  build_android:
+    type: build
+    params:
+      platform: android
+      profile: e2e-test
+  maestro_android:
+    needs: [build_android]
+    type: maestro
+    runs_on: linux-medium-nested-virtualization
+    params:
+      build_id: ${{ needs.build_android.outputs.build_id }}
+      flow_path:
+        [
+          ../../.maestro/open-scenarios.yml,
+          ../../.maestro/interactions.yml,
+          ../../.maestro/recorder.yml,
+        ]

@@ -1,0 +1,16 @@
+appId: dev.sirenui.playground
+---
+- launchApp
+- tapOn: "Waveforms"
+- swipe:
+    start: 20%, 45%
+    end: 80%, 45%
+    duration: 500
+- back
+- tapOn: "Playback"
+- tapOn: "Play voice note"
+- tapOn: "Pause voice note"
+- back
+- tapOn: "Agent visualizer"
+- tapOn: "speaking"
+- tapOn: "Run rapid transitions"

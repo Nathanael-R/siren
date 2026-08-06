@@ -1,0 +1,15 @@
+appId: dev.sirenui.playground
+---
+- launchApp
+- assertVisible: "Siren Playground"
+- tapOn: "Waveforms"
+- assertVisible: "Large and dense input"
+- back
+- tapOn: "Recorder"
+- assertVisible: "Real microphone"
+- back
+- tapOn: "Playback"
+- assertVisible: "Controlled player"
+- back
+- tapOn: "Agent visualizer"
+- assertVisible: "radial-bars"

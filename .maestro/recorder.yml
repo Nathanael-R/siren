@@ -1,0 +1,21 @@
+appId: dev.sirenui.playground
+---
+- launchApp
+- tapOn: "Recorder"
+- assertVisible: "Real microphone"
+- tapOn:
+    text: "Allow microphone"
+    optional: true
+- tapOn:
+    text: "While using the app"
+    optional: true
+- tapOn: "Hold to record"
+- assertVisible:
+    text: "Recording"
+    optional: true
+- tapOn:
+    text: "Release to stop"
+    optional: true
+- assertVisible:
+    text: "Use recording"
+    optional: true

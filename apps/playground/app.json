@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "Siren Playground",
+    "slug": "siren-playground",
+    "scheme": "siren-playground",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "plugins": [
+      "expo-router",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow Siren Playground to test voice recording on this device.",
+          "enableBackgroundRecording": false
+        }
+      ]
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "dev.sirenui.playground"
+    },
+    "android": { "package": "dev.sirenui.playground" },
+    "web": { "bundler": "metro", "output": "static" },
+    "experiments": { "typedRoutes": true, "autolinkingModuleResolution": true }
+  }
+}

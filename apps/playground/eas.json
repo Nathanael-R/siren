@@ -1,0 +1,13 @@
+{
+  "cli": { "version": ">= 16.20.0" },
+  "build": {
+    "development": { "developmentClient": true, "distribution": "internal" },
+    "preview": { "distribution": "internal" },
+    "e2e-test": {
+      "withoutCredentials": true,
+      "android": { "buildType": "apk" },
+      "ios": { "simulator": true }
+    },
+    "production": { "autoIncrement": true }
+  }
+}
