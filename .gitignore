@@ -12,6 +12,8 @@ lib/
 .cache/
 .vitepress/cache/
 .vitepress/dist/
+apps/docs/.vitepress/cache/
+apps/docs/.vitepress/dist/
 *.tsbuildinfo
 *.tgz
 
