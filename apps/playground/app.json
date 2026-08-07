@@ -18,10 +18,34 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "dev.sirenui.playground"
+      "bundleIdentifier": "dev.sirenui.playground",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
-    "android": { "package": "dev.sirenui.playground" },
-    "web": { "bundler": "metro", "output": "static" },
-    "experiments": { "typedRoutes": true, "autolinkingModuleResolution": true }
+    "android": {
+      "package": "dev.sirenui.playground",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "experiments": {
+      "typedRoutes": true,
+      "autolinkingModuleResolution": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "74683d07-ca38-4e9b-ad8a-4865549b67d7"
+      }
+    },
+    "owner": "rhayne"
   }
 }
