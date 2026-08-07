@@ -85,7 +85,11 @@ async function copyCommand() {
         </div>
       </div>
 
-      <div class="hero-state-control" aria-label="Visualizer state preview">
+      <div
+        class="hero-state-control"
+        :data-state="activeState"
+        aria-label="Visualizer state preview"
+      >
         <button
           v-for="state in states"
           :key="state"

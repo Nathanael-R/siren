@@ -12,6 +12,7 @@
   --siren-paper: #f7f7f4;
   --siren-red: #f04b3a;
   --siren-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --siren-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
 .dark {
@@ -103,6 +104,30 @@
   position: relative;
   z-index: 2;
   width: min(680px, 68%);
+}
+
+.hero-kicker,
+.siren-hero h1,
+.hero-lede,
+.hero-actions,
+.hero-command {
+  animation: hero-enter 560ms var(--siren-ease-out) both;
+}
+
+.siren-hero h1 {
+  animation-delay: 50ms;
+}
+
+.hero-lede {
+  animation-delay: 100ms;
+}
+
+.hero-actions {
+  animation-delay: 150ms;
+}
+
+.hero-command {
+  animation-delay: 200ms;
 }
 
 .hero-kicker,
@@ -244,6 +269,7 @@
   aspect-ratio: 1;
   display: grid;
   place-items: center;
+  animation: signal-enter 700ms var(--siren-ease-out) 100ms both;
 }
 
 .orb-core,
@@ -258,8 +284,7 @@
   background: var(--siren-red);
   box-shadow: 0 0 60px rgba(240, 75, 58, 0.36);
   transition:
-    transform 500ms var(--siren-ease-out),
-    border-radius 500ms var(--siren-ease-out),
+    transform 240ms var(--siren-ease-in-out),
     background-color 240ms ease;
 }
 
@@ -274,7 +299,7 @@
 .orb-ring {
   inset: 3%;
   border: 1px solid rgba(240, 75, 58, 0.38);
-  animation: ring-breathe 2s ease-in-out infinite;
+  animation: ring-breathe 2s var(--siren-ease-in-out) infinite;
 }
 
 .orb-ring-two {
@@ -283,7 +308,6 @@
 }
 
 .hero-signal[data-state="thinking"] .orb-core {
-  border-radius: 42% 58% 54% 46%;
   transform: rotate(16deg) scale(0.88);
   background: #ff735f;
 }
@@ -307,6 +331,7 @@
   justify-content: center;
   gap: clamp(3px, 0.55vw, 7px);
   opacity: 0.78;
+  animation: waveform-enter 620ms var(--siren-ease-out) 180ms both;
 }
 
 .signal-wave i {
@@ -316,7 +341,7 @@
   border-radius: 999px;
   background: #fff;
   transform: scaleY(0.64);
-  animation: signal-level 860ms ease-in-out infinite alternate;
+  animation: signal-level 860ms var(--siren-ease-in-out) infinite alternate;
   animation-delay: var(--bar-delay);
   transition: opacity 180ms ease;
 }
@@ -336,11 +361,37 @@
   z-index: 3;
   right: max(24px, calc((100vw - 1180px) / 2));
   bottom: 36px;
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 88px);
   gap: 4px;
+  padding: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.hero-state-control::before {
+  content: "";
+  position: absolute;
+  inset: 3px auto 3px 3px;
+  width: 88px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.11);
+  transform: translateX(0);
+  transition: transform 220ms var(--siren-ease-in-out);
+}
+
+.hero-state-control[data-state="thinking"]::before {
+  transform: translateX(92px);
+}
+
+.hero-state-control[data-state="speaking"]::before {
+  transform: translateX(184px);
 }
 
 .hero-state-control button {
+  position: relative;
+  z-index: 1;
   min-height: 36px;
   padding: 0 11px;
   display: flex;
@@ -369,7 +420,6 @@
 
 .hero-state-control button[aria-pressed="true"] {
   color: #fff;
-  background: rgba(255, 255, 255, 0.1);
 }
 
 .proof-strip {
@@ -434,7 +484,6 @@
   text-decoration: none;
   transition:
     color 180ms ease,
-    padding 220ms var(--siren-ease-out),
     background-color 180ms ease;
 }
 
@@ -633,6 +682,45 @@
   }
 }
 
+@keyframes hero-enter {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes signal-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes waveform-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10%);
+  }
+  to {
+    opacity: 0.78;
+    transform: translateY(0);
+  }
+}
+
+@keyframes siren-fade {
+  from {
+    opacity: 0;
+  }
+}
+
 @keyframes signal-level {
   from {
     transform: scaleY(0.42);
@@ -661,8 +749,6 @@
   }
 
   .component-list a:hover {
-    padding-right: 10px;
-    padding-left: 10px;
     color: #c63629;
     background: #fafaf7;
   }
@@ -795,6 +881,16 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .hero-kicker,
+  .siren-hero h1,
+  .hero-lede,
+  .hero-actions,
+  .hero-command,
+  .signal-orb,
+  .signal-wave {
+    animation: siren-fade 200ms ease both;
+  }
+
   .orb-ring,
   .signal-wave i {
     animation: none;
@@ -805,6 +901,10 @@
   .component-list a,
   .component-list b,
   .orb-core {
+    transition-duration: 0.01ms;
+  }
+
+  .hero-state-control::before {
     transition-duration: 0.01ms;
   }
 }
