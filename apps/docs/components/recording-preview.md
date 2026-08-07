@@ -11,5 +11,6 @@
 ```
 
 Playback, speed, scrubbing, duration, loading, error, discard, and confirmation states are included.
+For fixture or asset-backed previews, `source` can override the recording URI while preserving the recording returned by `onConfirm`.
 
 <!--@include: ./_shared.md-->

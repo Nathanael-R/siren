@@ -1,3 +1,4 @@
+import { Asset } from "expo-asset";
 import { useCallback, useEffect, useMemo } from "react";
 import {
   useAudioPlayer,
@@ -5,12 +6,12 @@ import {
   type AudioSource,
 } from "expo-audio";
 
-export function useVoiceNotePlayer(uri?: string, updateIntervalMs = 100) {
-  const source = useMemo<AudioSource | null>(
-    () => (uri ? { uri } : null),
-    [uri],
-  );
-  const player = useAudioPlayer(source, {
+export function useVoiceNotePlayer(
+  source?: AudioSource,
+  updateIntervalMs = 100,
+) {
+  const nativeSource = useMemo(() => resolveNativeSource(source), [source]);
+  const player = useAudioPlayer(nativeSource, {
     updateInterval: updateIntervalMs,
     downloadFirst: false,
   });
@@ -43,4 +44,26 @@ export function useVoiceNotePlayer(uri?: string, updateIntervalMs = 100) {
     seek,
     setRate,
   };
+}
+
+function resolveNativeSource(source?: AudioSource): AudioSource {
+  if (typeof source === "number") {
+    const asset = Asset.fromModule(source);
+    return { uri: asset.localUri ?? asset.uri, name: asset.name };
+  }
+  if (
+    typeof source === "object" &&
+    source !== null &&
+    "assetId" in source &&
+    typeof source.assetId === "number"
+  ) {
+    const asset = Asset.fromModule(source.assetId);
+    return {
+      ...source,
+      uri: asset.localUri ?? asset.uri,
+      assetId: undefined,
+    };
+  }
+  if (typeof source === "string") return { uri: source };
+  return source ?? null;
 }

@@ -1,35 +1,44 @@
 import type { SirenRecording } from "@siren-ui/core/recording";
 import {
-  Pressable,
   StyleSheet,
   Text,
   View,
   type StyleProp,
   type ViewStyle,
 } from "react-native";
-import { VoiceNotePlayer } from "./voice-note-player";
+import {
+  VoiceNotePlayer,
+  type VoiceNotePlayerProps,
+} from "./voice-note-player";
+import { MotionPressable } from "./motion-pressable";
 
 export function RecordingPreview({
   recording,
+  source,
   onDiscard,
   onConfirm,
   loading = false,
   error,
+  reducedMotion,
   style,
 }: {
   recording: SirenRecording;
+  source?: VoiceNotePlayerProps["source"];
   onDiscard: () => void;
   onConfirm: (recording: SirenRecording) => void;
   loading?: boolean;
   error?: string;
+  reducedMotion?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   return (
     <View accessibilityLabel="Recording preview" style={[styles.root, style]}>
       <VoiceNotePlayer
         recording={recording}
+        source={source}
         loading={loading}
         error={!!error}
+        reducedMotion={reducedMotion}
       />
       {error ? (
         <Text accessibilityRole="alert" style={styles.error}>
@@ -37,21 +46,21 @@ export function RecordingPreview({
         </Text>
       ) : null}
       <View style={styles.actions}>
-        <Pressable
-          accessibilityRole="button"
+        <MotionPressable
           onPress={onDiscard}
           style={styles.secondary}
+          reducedMotion={reducedMotion}
         >
           <Text>Discard</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
+        </MotionPressable>
+        <MotionPressable
           onPress={() => onConfirm(recording)}
           disabled={loading}
           style={styles.primary}
+          reducedMotion={reducedMotion}
         >
           <Text style={styles.primaryText}>Use recording</Text>
-        </Pressable>
+        </MotionPressable>
       </View>
     </View>
   );

@@ -7,6 +7,7 @@
     "build": "expo export --platform web --output-dir dist",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "export": "expo export --platform web --output-dir dist",
+    "generate:audio": "node scripts/generate-demo-audio.mjs && prettier --write data/demo-audio.generated.ts",
     "lint": "expo lint",
     "start": "expo start --dev-client",
     "test": "jest --runInBand",

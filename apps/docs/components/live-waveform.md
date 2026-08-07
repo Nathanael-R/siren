@@ -6,6 +6,6 @@
 <LiveWaveform sample={level} historySize={48} paused={paused} />
 ```
 
-API: controlled normalized `sample`, bounded history, direction, pause, reduced motion, color, height, and label. The fixed bars update through shared values without React state per sample.
+API: controlled normalized `sample`, bounded history, direction, pause, reduced motion, color, height, and label. The fixed bars interpolate through shared values instead of snapping and do not use React state per sample. Reduced Motion keeps the data legible but removes interpolation.
 
 <!--@include: ./_shared.md-->

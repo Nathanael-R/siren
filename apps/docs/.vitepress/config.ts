@@ -58,6 +58,7 @@ export default defineConfig({
           { text: "Registry", link: "/architecture/registry" },
           { text: "Audio model", link: "/architecture/audio-model" },
           { text: "Recorder", link: "/architecture/recorder" },
+          { text: "Motion", link: "/architecture/motion" },
           { text: "Renderers", link: "/architecture/renderers" },
           { text: "Performance", link: "/architecture/performance" },
         ],

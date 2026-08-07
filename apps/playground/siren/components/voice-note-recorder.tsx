@@ -4,7 +4,6 @@ import type {
 } from "@siren-ui/core/recording";
 import { forwardRef, useImperativeHandle } from "react";
 import {
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -15,6 +14,7 @@ import { useExpoVoiceRecorder } from "../hooks/use-expo-voice-recorder";
 import { AudioStatusIndicator } from "./audio-status-indicator";
 import { HoldToRecord } from "./hold-to-record";
 import { LiveWaveform } from "./live-waveform";
+import { MotionPressable } from "./motion-pressable";
 import { RecordingPreview } from "./recording-preview";
 import { RecordingTimer } from "./recording-timer";
 
@@ -26,6 +26,7 @@ export type VoiceNoteRecorderProps = {
   onComplete: (recording: SirenRecording) => void;
   onError?: (error: unknown) => void;
   labels?: Partial<Record<"cancel" | "lock" | "retry" | "record", string>>;
+  reducedMotion?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -41,6 +42,7 @@ export const VoiceNoteRecorder = forwardRef<
     onComplete,
     onError,
     labels,
+    reducedMotion,
     style,
   },
   ref,
@@ -70,6 +72,7 @@ export const VoiceNoteRecorder = forwardRef<
         recording={snapshot.recording}
         onDiscard={recorder.reset}
         onConfirm={onComplete}
+        reducedMotion={reducedMotion}
         style={style}
       />
     );
@@ -79,6 +82,7 @@ export const VoiceNoteRecorder = forwardRef<
         <AudioStatusIndicator
           status="error"
           label={snapshot.error?.type.replaceAll("-", " ")}
+          reducedMotion={reducedMotion}
         />
         {snapshot.error?.type === "recording-interrupted" &&
         snapshot.error.partialUri ? (
@@ -86,13 +90,13 @@ export const VoiceNoteRecorder = forwardRef<
             A partial recording is available at {snapshot.error.partialUri}
           </Text>
         ) : null}
-        <Pressable
-          accessibilityRole="button"
+        <MotionPressable
           onPress={recorder.reset}
           style={styles.action}
+          reducedMotion={reducedMotion}
         >
           <Text>{labels?.retry ?? "Try again"}</Text>
-        </Pressable>
+        </MotionPressable>
       </View>
     );
   const active =
@@ -111,12 +115,14 @@ export const VoiceNoteRecorder = forwardRef<
                 ? "recording"
                 : "ready"
         }
+        reducedMotion={reducedMotion}
       />
       {active ? (
         <>
           <LiveWaveform
             sample={recorder.sample}
             paused={snapshot.state === "paused"}
+            reducedMotion={reducedMotion}
           />
           <RecordingTimer
             durationMs={snapshot.durationMs}
@@ -137,27 +143,28 @@ export const VoiceNoteRecorder = forwardRef<
         label={labels?.record}
         cancelLabel={labels?.cancel}
         lockLabel={labels?.lock}
+        reducedMotion={reducedMotion}
       />
       {snapshot.state === "locked" || snapshot.state === "paused" ? (
         <View style={styles.row}>
-          <Pressable
-            accessibilityRole="button"
+          <MotionPressable
             onPress={() =>
               void (snapshot.state === "paused"
                 ? recorder.resume()
                 : recorder.pause())
             }
             style={styles.action}
+            reducedMotion={reducedMotion}
           >
             <Text>{snapshot.state === "paused" ? "Resume" : "Pause"}</Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
+          </MotionPressable>
+          <MotionPressable
             onPress={() => void recorder.stop()}
             style={styles.action}
+            reducedMotion={reducedMotion}
           >
             <Text>Finish</Text>
-          </Pressable>
+          </MotionPressable>
         </View>
       ) : null}
     </View>

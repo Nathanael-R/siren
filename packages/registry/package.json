@@ -20,6 +20,7 @@
     "zod": "catalog:"
   },
   "peerDependencies": {
+    "expo-asset": ">=56 <58",
     "expo-audio": ">=56 <58",
     "expo-haptics": ">=56 <58",
     "react": ">=19.2",
@@ -30,6 +31,7 @@
   },
   "devDependencies": {
     "@types/react": "^19.2.0",
+    "expo-asset": "57.0.9",
     "expo-audio": "57.0.3",
     "expo-haptics": "57.0.1",
     "react": "19.2.3",

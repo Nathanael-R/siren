@@ -1,7 +1,7 @@
 import { adjustableStep } from "@siren-ui/core/accessibility";
 import { normalizeAmplitude } from "@siren-ui/core/waveform";
 import { developmentWarning } from "@siren-ui/core/warnings";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   I18nManager,
   StyleSheet,
@@ -12,6 +12,21 @@ import {
   type ViewStyle,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
+import {
+  shouldReduceMotion,
+  sirenEaseOut,
+  sirenPressIn,
+  sirenStateSpring,
+} from "../motion";
 import { Waveform } from "./waveform";
 
 export type WaveformScrubberProps = {
@@ -39,48 +54,92 @@ export function WaveformScrubber({
   accessibilityLabel = "Audio position",
   style,
 }: WaveformScrubberProps) {
-  const width = useRef(1);
-  const lastPreviewAt = useRef(0);
-  const [previewMs, setPreviewMs] = useState<number>();
+  const systemReducedMotion = useReducedMotion();
+  const reduce = shouldReduceMotion(reducedMotion, systemReducedMotion);
+  const width = useSharedValue(1);
+  const progress = useSharedValue(
+    durationMs > 0 ? normalizeAmplitude(positionMs / durationMs) : 0,
+  );
+  const pressed = useSharedValue(0);
+  const lastPreviewAt = useSharedValue(0);
+  const seeking = useRef(false);
   developmentWarning(
     "scrubber-height",
     height >= 44,
     "WaveformScrubber should be at least 44 points tall for a safe touch target.",
   );
 
-  const toPosition = (x: number) => {
-    const ratio = normalizeAmplitude(x / width.current);
-    return (I18nManager.isRTL ? 1 - ratio : ratio) * Math.max(0, durationMs);
-  };
+  useEffect(() => {
+    if (seeking.current) return;
+    const next =
+      durationMs > 0 ? normalizeAmplitude(positionMs / durationMs) : 0;
+    progress.set(
+      reduce ? next : withTiming(next, { duration: 120, easing: sirenEaseOut }),
+    );
+  }, [durationMs, positionMs, progress, reduce]);
 
-  const gesture = useMemo(
-    () =>
-      Gesture.Race(
-        Gesture.Pan()
-          .enabled(!disabled)
-          .runOnJS(true)
-          .onUpdate(({ x }) => {
-            const next = toPosition(x);
-            setPreviewMs(next);
-            const now = Date.now();
-            if (now - lastPreviewAt.current >= 100) {
-              lastPreviewAt.current = now;
-              onSeekPreview?.(next);
-            }
-          })
-          .onEnd(({ x }) => {
-            const next = toPosition(x);
-            setPreviewMs(undefined);
-            onSeek(next);
-          })
-          .onFinalize(() => setPreviewMs(undefined)),
-        Gesture.Tap()
-          .enabled(!disabled)
-          .runOnJS(true)
-          .onEnd(({ x }) => onSeek(toPosition(x))),
-      ),
-    [disabled, durationMs, onSeek, onSeekPreview],
-  );
+  const markSeeking = (value: boolean) => {
+    seeking.current = value;
+  };
+  const rtl = I18nManager.isRTL;
+  const gesture = useMemo(() => {
+    const ratioAt = (x: number) => {
+      "worklet";
+      const ratio = Math.max(0, Math.min(1, x / width.get()));
+      return rtl ? 1 - ratio : ratio;
+    };
+    const begin = () => {
+      "worklet";
+      pressed.set(withTiming(1, sirenPressIn));
+      runOnJS(markSeeking)(true);
+    };
+    const finalize = () => {
+      "worklet";
+      pressed.set(reduce ? 0 : withSpring(0, sirenStateSpring));
+      runOnJS(markSeeking)(false);
+    };
+    return Gesture.Race(
+      Gesture.Pan()
+        .enabled(!disabled)
+        .minDistance(1)
+        .onBegin(begin)
+        .onUpdate(({ x }) => {
+          const next = ratioAt(x);
+          progress.set(next);
+          const now = Date.now();
+          if (onSeekPreview && now - lastPreviewAt.get() >= 100) {
+            lastPreviewAt.set(now);
+            runOnJS(onSeekPreview)(next * Math.max(0, durationMs));
+          }
+        })
+        .onEnd(({ x }) => {
+          const next = ratioAt(x);
+          progress.set(next);
+          runOnJS(onSeek)(next * Math.max(0, durationMs));
+        })
+        .onFinalize(finalize),
+      Gesture.Tap()
+        .enabled(!disabled)
+        .onBegin(begin)
+        .onEnd(({ x }) => {
+          const next = ratioAt(x);
+          progress.set(reduce ? next : withSpring(next, sirenStateSpring));
+          runOnJS(onSeek)(next * Math.max(0, durationMs));
+        })
+        .onFinalize(finalize),
+    );
+  }, [
+    disabled,
+    durationMs,
+    lastPreviewAt,
+    onSeek,
+    onSeekPreview,
+    pressed,
+    progress,
+    reduce,
+    rtl,
+    width,
+  ]);
 
   const onAccessibilityAction = (event: AccessibilityActionEvent) => {
     if (
@@ -94,9 +153,23 @@ export function WaveformScrubber({
   };
 
   const onLayout = (event: LayoutChangeEvent) => {
-    width.current = Math.max(1, event.nativeEvent.layout.width);
+    width.set(Math.max(1, event.nativeEvent.layout.width));
   };
-  const shownPosition = previewMs ?? positionMs;
+  const progressStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleX: progress.get() }],
+  }));
+  const thumbStyle = useAnimatedStyle(() => {
+    const physicalProgress = rtl ? 1 - progress.get() : progress.get();
+    return {
+      opacity: interpolate(pressed.get(), [0, 1], [0.78, 1]),
+      transform: [
+        { translateX: physicalProgress * width.get() - 7 },
+        {
+          scale: reduce ? 1 : interpolate(pressed.get(), [0, 1], [0.82, 1.16]),
+        },
+      ],
+    };
+  });
 
   return (
     <GestureDetector gesture={gesture}>
@@ -107,8 +180,8 @@ export function WaveformScrubber({
         accessibilityValue={{
           min: 0,
           max: Math.max(0, Math.round(durationMs)),
-          now: Math.round(shownPosition),
-          text: `${Math.round(shownPosition / 1000)} seconds`,
+          now: Math.round(positionMs),
+          text: `${Math.round(positionMs / 1000)} seconds`,
         }}
         accessibilityActions={[
           { name: "increment", label: "Seek forward" },
@@ -118,11 +191,24 @@ export function WaveformScrubber({
         onLayout={onLayout}
         style={[styles.touchArea, { minHeight: height }, style]}
       >
+        <View pointerEvents="none" style={styles.track}>
+          <Animated.View
+            style={[
+              styles.progress,
+              rtl ? styles.progressRtl : styles.progressLtr,
+              progressStyle,
+            ]}
+          />
+        </View>
         <Waveform
           samples={samples}
-          progress={durationMs > 0 ? shownPosition / durationMs : 0}
+          progress={durationMs > 0 ? positionMs / durationMs : 0}
           height={Math.max(24, height - 12)}
-          reducedMotion={reducedMotion}
+          reducedMotion={reduce}
+        />
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.thumb, thumbStyle]}
         />
       </View>
     </GestureDetector>
@@ -131,4 +217,35 @@ export function WaveformScrubber({
 
 const styles = StyleSheet.create({
   touchArea: { justifyContent: "center", width: "100%" },
+  track: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: "rgba(38,110,241,0.12)",
+    overflow: "hidden",
+  },
+  progress: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: 999,
+    backgroundColor: "rgba(38,110,241,0.38)",
+  },
+  progressLtr: { transformOrigin: "left center" },
+  progressRtl: { transformOrigin: "right center" },
+  thumb: {
+    position: "absolute",
+    left: 0,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#266EF1",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+    shadowColor: "#15171A",
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
 });

@@ -2,19 +2,16 @@ import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ScenarioCard } from "@/components/scenario-card";
 import { AudioStatusIndicator } from "@/siren/components/audio-status-indicator";
-import { RecordingPreview } from "@/siren/components/recording-preview";
 import { VoiceNotePlayer } from "@/siren/components/voice-note-player";
+import {
+  DemoAudioShowcase,
+  DemoRecordingPreview,
+} from "@/components/demo-audio-showcase";
 
 const samples = Array.from(
   { length: 180 },
   (_, index) => 0.12 + Math.abs(Math.sin(index * 0.3)) * 0.84,
 );
-const recording = {
-  uri: "file:///deterministic-scenario.m4a",
-  durationMs: 42_000,
-  waveform: samples,
-};
-
 export default function PlaybackScreen() {
   const [playing, setPlaying] = useState(false);
   const [positionMs, setPositionMs] = useState(9_000);
@@ -24,6 +21,12 @@ export default function PlaybackScreen() {
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={styles.content}
     >
+      <ScenarioCard
+        title="Playable bundled audio"
+        description="Original offline fixtures exercise real playback, waveform progress, seeking, and speed on a physical device."
+      >
+        <DemoAudioShowcase />
+      </ScenarioCard>
       <ScenarioCard
         title="Controlled player"
         description="Deterministic data exercises play/pause, speed, scrubbing, and completion without reading a file."
@@ -46,8 +49,7 @@ export default function PlaybackScreen() {
         </View>
       </ScenarioCard>
       <ScenarioCard title="Recording preview">
-        <RecordingPreview
-          recording={recording}
+        <DemoRecordingPreview
           onDiscard={() => setPositionMs(0)}
           onConfirm={() => setPlaying(false)}
         />

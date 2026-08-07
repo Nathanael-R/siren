@@ -14,6 +14,12 @@ const file = (
   type,
   target: `siren/${type === "component" ? "components" : `${type}s`}/${name}.tsx`,
 });
+const motionFile = {
+  path: "motion.ts",
+  type: "utility" as const,
+  target: "siren/motion.ts",
+};
+const motionPressableFile = file("motion-pressable");
 
 export const registryEntries: RegistryEntry[] = [
   {
@@ -38,7 +44,11 @@ export const registryEntries: RegistryEntry[] = [
     status: "experimental",
     description:
       "A bounded live waveform that updates fixed native bars without React state per sample.",
-    files: [file("live-waveform"), file("use-live-waveform", "hook")],
+    files: [
+      file("live-waveform"),
+      file("use-live-waveform", "hook"),
+      motionFile,
+    ],
     registryDependencies: [],
     dependencies: ["@siren-ui/core", "react-native-reanimated"],
     peerDependencies: { ...peers, "react-native-reanimated": ">=4.3 <4.6" },
@@ -55,10 +65,18 @@ export const registryEntries: RegistryEntry[] = [
     version: "0.1.0-alpha.1",
     status: "experimental",
     description: "Accessible tap and drag seeking over a normalized waveform.",
-    files: [file("waveform-scrubber")],
+    files: [file("waveform-scrubber"), motionFile],
     registryDependencies: ["waveform"],
-    dependencies: ["@siren-ui/core", "react-native-gesture-handler"],
-    peerDependencies: { ...peers, "react-native-gesture-handler": ">=2.28 <3" },
+    dependencies: [
+      "@siren-ui/core",
+      "react-native-gesture-handler",
+      "react-native-reanimated",
+    ],
+    peerDependencies: {
+      ...peers,
+      "react-native-gesture-handler": ">=2.28 <3",
+      "react-native-reanimated": ">=4.3 <4.6",
+    },
     requiresCore: "^0.1.0",
     platforms: native,
     expoGo: true,
@@ -73,7 +91,7 @@ export const registryEntries: RegistryEntry[] = [
     status: "experimental",
     description:
       "Hold, slide-to-cancel, and slide-to-lock recording gesture primitive.",
-    files: [file("hold-to-record")],
+    files: [file("hold-to-record"), motionFile],
     registryDependencies: [],
     dependencies: [
       "@siren-ui/core",
@@ -131,10 +149,10 @@ export const registryEntries: RegistryEntry[] = [
     status: "experimental",
     description:
       "Neutral accessible presentation for meaningful audio lifecycle states.",
-    files: [file("audio-status-indicator")],
+    files: [file("audio-status-indicator"), motionFile],
     registryDependencies: [],
-    dependencies: [],
-    peerDependencies: peers,
+    dependencies: ["react-native-reanimated"],
+    peerDependencies: { ...peers, "react-native-reanimated": ">=4.3 <4.6" },
     platforms: native,
     expoGo: true,
     developmentBuildRequired: false,
@@ -146,7 +164,7 @@ export const registryEntries: RegistryEntry[] = [
     status: "experimental",
     description:
       "Behavior-led orb, waveform-field, and radial-bars agent visualization variants.",
-    files: [file("agent-visualizer")],
+    files: [file("agent-visualizer"), motionFile],
     registryDependencies: [],
     dependencies: ["@siren-ui/core", "react-native-reanimated"],
     peerDependencies: { ...peers, "react-native-reanimated": ">=4.3 <4.6" },
@@ -164,10 +182,10 @@ export const registryEntries: RegistryEntry[] = [
     status: "experimental",
     description:
       "Recording confirmation block with playback, scrubbing, speed, discard, and use actions.",
-    files: [file("recording-preview")],
+    files: [file("recording-preview"), motionPressableFile, motionFile],
     registryDependencies: ["voice-note-player"],
-    dependencies: ["@siren-ui/core"],
-    peerDependencies: peers,
+    dependencies: ["@siren-ui/core", "react-native-reanimated"],
+    peerDependencies: { ...peers, "react-native-reanimated": ">=4.3 <4.6" },
     requiresCore: "^0.1.0",
     platforms: native,
     expoGo: true,
@@ -180,10 +198,20 @@ export const registryEntries: RegistryEntry[] = [
     status: "experimental",
     description:
       "Controlled and Expo-backed voice note playback with waveform seeking and speed controls.",
-    files: [file("voice-note-player"), file("use-voice-note-player", "hook")],
+    files: [
+      file("voice-note-player"),
+      file("use-voice-note-player", "hook"),
+      motionPressableFile,
+      motionFile,
+    ],
     registryDependencies: ["waveform-scrubber", "audio-status-indicator"],
-    dependencies: ["@siren-ui/core", "expo-audio"],
-    peerDependencies: peers,
+    dependencies: [
+      "@siren-ui/core",
+      "expo-asset",
+      "expo-audio",
+      "react-native-reanimated",
+    ],
+    peerDependencies: { ...peers, "react-native-reanimated": ">=4.3 <4.6" },
     requiresCore: "^0.1.0",
     platforms: native,
     expoGo: true,
@@ -199,6 +227,8 @@ export const registryEntries: RegistryEntry[] = [
     files: [
       file("voice-note-recorder"),
       file("use-expo-voice-recorder", "hook"),
+      motionPressableFile,
+      motionFile,
     ],
     registryDependencies: [
       "hold-to-record",
@@ -208,8 +238,8 @@ export const registryEntries: RegistryEntry[] = [
       "recording-preview",
       "audio-status-indicator",
     ],
-    dependencies: ["@siren-ui/core", "expo-audio"],
-    peerDependencies: peers,
+    dependencies: ["@siren-ui/core", "expo-audio", "react-native-reanimated"],
+    peerDependencies: { ...peers, "react-native-reanimated": ">=4.3 <4.6" },
     requiresCore: "^0.1.0",
     platforms: native,
     expoGo: true,

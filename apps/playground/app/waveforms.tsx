@@ -4,6 +4,7 @@ import { ScenarioCard } from "@/components/scenario-card";
 import { LiveWaveform } from "@/siren/components/live-waveform";
 import { Waveform } from "@/siren/components/waveform";
 import { WaveformScrubber } from "@/siren/components/waveform-scrubber";
+import { DemoAudioShowcase } from "@/components/demo-audio-showcase";
 
 const small = [0.15, 0.4, 0.7, 0.3, 0.9, 0.45, 0.2];
 const large = Array.from(
@@ -34,6 +35,12 @@ export default function WaveformsScreen() {
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={styles.content}
     >
+      <ScenarioCard
+        title="Audio-synchronized waveform"
+        description="The fixed waveform, moving playhead, and live history all share the audible clip's precomputed amplitude envelope."
+      >
+        <DemoAudioShowcase mode="waveform" />
+      </ScenarioCard>
       <ScenarioCard title="Small and extreme sizes">
         <Waveform samples={small} progress={0.4} height={28} />
         <Waveform

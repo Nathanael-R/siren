@@ -65,6 +65,7 @@ async function copyCanonical(target: string) {
     await cp(join(sourceRoot, directory), join(target, directory), {
       recursive: true,
     });
+  await cp(join(sourceRoot, "motion.ts"), join(target, "motion.ts"));
 }
 
 async function generate(output = generatedFile, copyConsumers = true) {
@@ -105,8 +106,10 @@ async function check() {
     )
       throw new Error("Generated registry JSON is stale. Run pnpm generate.");
     for (const consumer of consumers) {
-      const canonicalFiles = (await listFiles(sourceRoot)).filter((path) =>
-        /[\\/](components|hooks|recipes)[\\/]/.test(path),
+      const canonicalFiles = (await listFiles(sourceRoot)).filter(
+        (path) =>
+          /[\\/](components|hooks|recipes)[\\/]/.test(path) ||
+          /[\\/]motion\.ts$/.test(path),
       );
       for (const source of canonicalFiles) {
         const target = join(consumer, relative(sourceRoot, source));

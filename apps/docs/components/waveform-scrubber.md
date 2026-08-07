@@ -1,6 +1,6 @@
 # WaveformScrubber
 
-`siren-ui add waveform-scrubber` copies the scrubber and Waveform. Dependencies: core and Gesture Handler. iOS/Android supported; web experimental; Expo Go supported. Wrap roots with `GestureHandlerRootView`.
+`siren-ui add waveform-scrubber` copies the scrubber and Waveform. Dependencies: core, Gesture Handler, and Reanimated/Worklets. iOS/Android supported; web experimental; Expo Go supported. Wrap roots with `GestureHandlerRootView`.
 
 ```tsx
 <WaveformScrubber
@@ -12,6 +12,6 @@
 />
 ```
 
-Drag and tap seek; preview callbacks are throttled; final seek is distinct. Accessibility actions seek in five-percent/one-second steps and RTL reverses geometry.
+Drag and tap seek with a UI-thread playhead; React does not rerender for every drag frame. Preview callbacks are throttled while the final seek remains distinct. Accessibility actions seek in five-percent/one-second steps and RTL reverses geometry.
 
 <!--@include: ./_shared.md-->

@@ -12,6 +12,6 @@
 />
 ```
 
-Thresholds, RTL mirroring, interruption, haptics, and non-gesture cancel/lock buttons are included.
+The control responds on touch-down, starts only after the long-press activates, tracks the finger continuously, exposes cancel/lock threshold progress, and springs back from its current position. Thresholds, RTL mirroring, interruption, causal haptics, and non-gesture cancel/lock buttons are included. Reduced Motion preserves the gesture and feedback while removing travel and pulse motion.
 
 <!--@include: ./_shared.md-->

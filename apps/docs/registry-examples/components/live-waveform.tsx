@@ -1,12 +1,15 @@
 import { normalizeAmplitude } from "@siren-ui/core/waveform";
 import { developmentWarning } from "@siren-ui/core/warnings";
-import { memo, useEffect } from "react";
+import { memo, useEffect, useRef } from "react";
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import Animated, {
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
+  withTiming,
   type SharedValue,
 } from "react-native-reanimated";
+import { shouldReduceMotion, sirenEaseOut } from "../motion";
 
 export type LiveWaveformProps = {
   sample: number;
@@ -26,19 +29,30 @@ function LiveBar({
   height,
   color,
   reducedMotion,
+  recency,
+  newest,
+  arrival,
 }: {
   values: SharedValue<number[]>;
   index: number;
   height: number;
   color: string;
   reducedMotion: boolean;
+  recency: number;
+  newest: boolean;
+  arrival: SharedValue<number>;
 }) {
   const animatedStyle = useAnimatedStyle(() => {
     const value = values.value[index] ?? 0.04;
+    const arrivalScale =
+      newest && !reducedMotion ? 1 + arrival.value * 0.45 : 1;
     return {
-      transform: [{ scaleY: reducedMotion ? 0.35 : Math.max(0.04, value) }],
+      opacity: reducedMotion
+        ? 0.82
+        : (0.34 + value * 0.66) * (0.56 + recency * 0.44),
+      transform: [{ scaleX: arrivalScale }, { scaleY: Math.max(0.04, value) }],
     };
-  }, [height, index, reducedMotion]);
+  }, [height, index, newest, recency, reducedMotion]);
   return (
     <Animated.View
       style={[styles.bar, { height, backgroundColor: color }, animatedStyle]}
@@ -53,12 +67,16 @@ export const LiveWaveform = memo(function LiveWaveform({
   direction = "left-to-right",
   height = 48,
   color = "#266EF1",
-  reducedMotion = false,
+  reducedMotion,
   accessibilityLabel = "Live microphone level",
   style,
 }: LiveWaveformProps) {
   const safeSize = Math.max(4, Math.min(160, Math.floor(historySize)));
+  const systemReducedMotion = useReducedMotion();
+  const reduce = shouldReduceMotion(reducedMotion, systemReducedMotion);
   const values = useSharedValue(new Array<number>(safeSize).fill(0.04));
+  const arrival = useSharedValue(0);
+  const history = useRef(new Array<number>(safeSize).fill(0.04));
   developmentWarning(
     "live-history",
     historySize <= 160,
@@ -66,11 +84,23 @@ export const LiveWaveform = memo(function LiveWaveform({
   );
 
   useEffect(() => {
+    history.current = new Array<number>(safeSize).fill(0.04);
+    values.set(history.current);
+  }, [safeSize, values]);
+
+  useEffect(() => {
     if (paused) return;
-    const next = values.value.slice(1);
+    const next = history.current.slice(1);
     next.push(normalizeAmplitude(sample));
-    values.value = next;
-  }, [paused, sample, values]);
+    history.current = next;
+    arrival.set(reduce ? 0 : 1);
+    if (!reduce) {
+      arrival.set(withTiming(0, { duration: 180, easing: sirenEaseOut }));
+    }
+    values.set(
+      reduce ? next : withTiming(next, { duration: 120, easing: sirenEaseOut }),
+    );
+  }, [arrival, paused, reduce, sample, values]);
 
   return (
     <View
@@ -85,6 +115,10 @@ export const LiveWaveform = memo(function LiveWaveform({
         style,
       ]}
     >
+      <View
+        pointerEvents="none"
+        style={[styles.centerline, { backgroundColor: color }]}
+      />
       {Array.from({ length: safeSize }, (_, index) => (
         <LiveBar
           key={index}
@@ -92,7 +126,10 @@ export const LiveWaveform = memo(function LiveWaveform({
           index={index}
           height={height}
           color={color}
-          reducedMotion={reducedMotion}
+          reducedMotion={reduce}
+          recency={index / Math.max(1, safeSize - 1)}
+          newest={index === safeSize - 1}
+          arrival={arrival}
         />
       ))}
     </View>
@@ -108,4 +145,12 @@ const styles = StyleSheet.create({
   },
   reverse: { flexDirection: "row-reverse" },
   bar: { flex: 1, minWidth: 1, borderRadius: 999 },
+  centerline: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: "50%",
+    height: StyleSheet.hairlineWidth,
+    opacity: 0.2,
+  },
 });
